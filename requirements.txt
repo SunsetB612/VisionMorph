@@ -1,0 +1,45 @@
+# VisionMorph 项目依赖
+
+# Web框架
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# 数据库
+sqlalchemy==1.4.53
+alembic==1.12.1
+psycopg2-binary==2.9.9
+redis==5.0.1
+
+# 数据验证
+pydantic==2.5.0
+pydantic-settings==2.4.0
+
+# 认证安全
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# AI/ML
+torch==2.1.1
+torchvision==0.16.1
+transformers==4.36.0
+opencv-python==4.8.1.78
+Pillow==10.1.0
+
+# 图像处理
+numpy==1.26.2
+scikit-image==0.22.0
+
+# AI/LLM 相关
+openai==1.6.1
+tiktoken==0.5.2
+dataclasses-json==0.6.3
+langchain==0.3.21
+langchain-core==0.3.45
+langchain-community==0.3.20
+langsmith==0.1.125
+
+# 工具库
+python-dotenv==1.0.0
+httpx==0.25.2
+aiofiles==23.2.1
