@@ -82,6 +82,40 @@ body {
   color: white;
 }
 
+/* 用户菜单样式 */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-name {
+  color: #333;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.logout-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.auth-menu {
+  display: flex;
+  gap: 1rem;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .nav-container {

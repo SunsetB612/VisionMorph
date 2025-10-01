@@ -5,9 +5,13 @@ const API_BASE_URL = 'http://localhost:8000';
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // 获取认证token
+  const token = localStorage.getItem('auth_token');
+  
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
     },
   };
 

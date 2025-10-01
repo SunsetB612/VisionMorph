@@ -19,15 +19,24 @@ export interface GeneratedImageInfo {
 }
 
 class GenerationService {
+  private getAuthHeaders() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      throw new Error('未登录，请先登录');
+    }
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    };
+  }
+
   /**
    * 创建图片生成任务
    */
   async createGenerationTask(request: GenerationRequest): Promise<GenerationResponse> {
     const response = await fetch(`${API_BASE_URL}/generate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.getAuthHeaders(),
       body: JSON.stringify(request),
     });
 
@@ -43,7 +52,11 @@ class GenerationService {
    * 获取生成的图片列表
    */
   async getGeneratedImages(originalImageId: number): Promise<GeneratedImageInfo[]> {
-    const response = await fetch(`${API_BASE_URL}/generate/images/${originalImageId}`);
+    const response = await fetch(`${API_BASE_URL}/generate/images/${originalImageId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      },
+    });
 
     if (!response.ok) {
       const errorData = await response.json();

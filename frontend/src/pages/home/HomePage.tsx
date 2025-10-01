@@ -1,11 +1,13 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useUploadStore } from '../../store/uploadStore';
+import { useAuthStore } from '../../store/authStore';
 import './HomePage.css';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { clearFiles } = useUploadStore();
+  const { isAuthenticated, user } = useAuthStore();
 
   const handleStartUpload = () => {
     // 清理所有上传相关的状态，确保重新开始
@@ -20,6 +22,7 @@ const HomePage: React.FC = () => {
         <p className="hero-subtitle">
           AI智能构图生成新视角图片，提供专业评分与拍摄指导
         </p>
+        
         <div className="hero-features">
           <div className="feature-item">
             <div className="feature-icon">📸</div>
@@ -37,9 +40,24 @@ const HomePage: React.FC = () => {
             <p>专业评分、亮点分析与拍摄建议</p>
           </div>
         </div>
-        <button className="cta-button" onClick={handleStartUpload}>
-          开始智能构图
-        </button>
+        
+        <div className="hero-actions">
+          {isAuthenticated ? (
+            <div className="auth-actions">
+              <button className="auth-button primary" onClick={handleStartUpload}>
+                开始智能构图
+              </button>
+              <p className="auth-hint">欢迎回来，{user?.username}！开始您的创作之旅</p>
+            </div>
+          ) : (
+            <div className="auth-actions">
+              <Link to="/auth" className="auth-button primary">
+                开始使用
+              </Link>
+              <p className="auth-hint">注册账户，体验AI智能构图生成功能</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

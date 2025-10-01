@@ -12,5 +12,9 @@ TECH_ARCHITECTURE.md
 MYSQL_MIGRATION_GUIDE.md
 GENERATION_MODULE_README.md
 NEW_FILE_STRUCTURE.md
+AUTH_SYSTEM_README.md
 
 .env
+
+clear_database.py
+restore_default_user.py

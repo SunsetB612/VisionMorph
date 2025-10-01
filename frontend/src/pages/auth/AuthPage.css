@@ -1,0 +1,237 @@
+/* 认证页面样式 */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  padding: 20px;
+}
+
+.auth-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.auth-header h1 {
+  color: #0f172a;
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  background: linear-gradient(45deg, #0ea5e9, #0284c7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.auth-header p {
+  color: #475569;
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.auth-tabs {
+  display: flex;
+  background: rgba(14, 165, 233, 0.1);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 30px;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #475569;
+}
+
+.tab-button.active {
+  background: white;
+  color: #0ea5e9;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+}
+
+.tab-button:hover:not(.active) {
+  color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.05);
+}
+
+.auth-form {
+  margin-bottom: 30px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid rgba(14, 165, 233, 0.2);
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.8);
+  color: #0f172a;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+  background: white;
+}
+
+.form-group input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.error-message {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #dc2626;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  font-size: 1rem;
+  border: 2px solid #fecaca;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.1);
+}
+
+.error-message::before {
+  content: "⚠️";
+  font-size: 1.2rem;
+}
+
+.auth-button {
+  width: 100%;
+  background: linear-gradient(45deg, #0ea5e9, #0284c7);
+  color: white;
+  border: none;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+}
+
+.auth-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(14, 165, 233, 0.6);
+}
+
+.auth-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.2);
+}
+
+.auth-footer {
+  text-align: center;
+  border-top: 1px solid rgba(14, 165, 233, 0.2);
+  padding-top: 24px;
+}
+
+.auth-footer p {
+  margin: 0 0 16px 0;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.auth-link {
+  color: #0ea5e9;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.auth-link:hover {
+  color: #0284c7;
+  background: rgba(14, 165, 233, 0.1);
+  text-decoration: none;
+}
+
+.back-link {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  padding: 6px 12px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.back-link:hover {
+  color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 10px;
+  }
+  
+  .auth-container {
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
+  
+  .auth-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .auth-header p {
+    font-size: 0.9rem;
+  }
+  
+  .form-group input {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+  
+  .auth-button {
+    padding: 14px 20px;
+    font-size: 1rem;
+  }
+}

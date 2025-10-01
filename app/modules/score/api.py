@@ -4,6 +4,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.security import get_current_active_user
+from app.core.models import User
 from app.modules.score.schemas import (
     ScoreRequest, 
     ScoreResponse, 
@@ -21,7 +23,8 @@ router = APIRouter(prefix="/score", tags=["score"])
 @router.post("/create", response_model=ScoreResponse)
 async def create_image_scores(
     request: ScoreRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     为原始图片对应的所有生成图片创建评分
@@ -36,7 +39,8 @@ async def create_image_scores(
 @router.get("/original/{original_image_id}", response_model=list[GeneratedImageScore])
 async def get_scores_for_original_image(
     original_image_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取原始图片对应的所有生成图片的评分
@@ -49,7 +53,8 @@ async def get_scores_for_original_image(
 @router.get("/generated/{generated_image_id}", response_model=ScoreInfo)
 async def get_score_detail(
     generated_image_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取特定生成图片的详细评分信息

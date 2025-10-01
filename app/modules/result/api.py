@@ -4,6 +4,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.security import get_current_active_user
+from app.core.models import User
 from app.modules.result.schemas import (
     ResultListResponse, 
     ResultDetailResponse, 
@@ -20,7 +22,8 @@ router = APIRouter(prefix="/result", tags=["result"])
 @router.get("/original/{original_image_id}", response_model=ResultListResponse)
 async def get_results_for_original_image(
     original_image_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取原始图片对应的所有生成图片结果
@@ -36,7 +39,8 @@ async def get_results_for_original_image(
 @router.get("/generated/{generated_image_id}", response_model=ResultDetailResponse)
 async def get_result_detail_api(
     generated_image_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取特定生成图片的详细结果信息
@@ -53,7 +57,8 @@ async def get_result_detail_api(
 async def get_user_results(
     user_id: int,
     limit: int = Query(default=50, ge=1, le=100, description="限制返回的原始图片数量"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取用户的所有结果

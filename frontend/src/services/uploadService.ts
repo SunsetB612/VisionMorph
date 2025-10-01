@@ -9,9 +9,18 @@ export const uploadService = {
     const formData = new FormData();
     formData.append('file', file);
     
+    // 获取认证token
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      throw new Error('未登录，请先登录');
+    }
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/upload`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
         body: formData,
       });
       

@@ -3,6 +3,7 @@ import UploadComponent from '../../components/upload/UploadComponent';
 import { useUpload } from '../../hooks/useUpload';
 import { generationService } from '../../services/generationService';
 import { resultService } from '../../services/resultService';
+import { useAuthStore } from '../../store/authStore';
 import type { UploadFile } from '../../types/upload';
 import type { GeneratedImageInfo } from '../../types/generation';
 import './UploadPage.css';
@@ -11,6 +12,7 @@ type WorkflowStep = 'upload' | 'generating' | 'result';
 
 const UploadPage: React.FC = () => {
   const { uploadedFiles, isUploading, uploadMultipleFiles, clearFiles } = useUpload();
+  const { user } = useAuthStore();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('upload');
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImageInfo[]>([]);
@@ -240,12 +242,12 @@ const UploadPage: React.FC = () => {
                       onClick={() => openImageModal(image.id)}
                     >
                       <img 
-                        src={`http://localhost:8000/static/user1/results/${image.filename}`}
+                        src={`http://localhost:8000/static/user${user?.id || 1}/results/${image.filename}`}
                         alt={`生成图片 ${index + 1}`}
                         onError={(e) => {
                           // 如果生成图片不存在，显示原始图片
                           const target = e.target as HTMLImageElement;
-                          target.src = `http://localhost:8000/static/user1/original/${uploadedFiles[0]?.file.name}`;
+                          target.src = `http://localhost:8000/static/user${user?.id || 1}/original/${uploadedFiles[0]?.file.name}`;
                         }}
                       />
                       {image.result && (
@@ -319,11 +321,11 @@ const UploadPage: React.FC = () => {
                     <div className="modal-body">
                       <div className="modal-image">
                         <img 
-                          src={`http://localhost:8000/static/user1/results/${selectedImage.filename}`}
+                          src={`http://localhost:8000/static/user${user?.id || 1}/results/${selectedImage.filename}`}
                           alt="生成图片"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
-                            target.src = `http://localhost:8000/static/user1/original/${uploadedFiles[0]?.file.name}`;
+                            target.src = `http://localhost:8000/static/user${user?.id || 1}/original/${uploadedFiles[0]?.file.name}`;
                           }}
                         />
                       </div>

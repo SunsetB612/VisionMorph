@@ -6,6 +6,7 @@ from app.modules.upload.api import router as upload_router
 from app.modules.generate.api import router as generate_router
 from app.modules.score.api import router as score_router
 from app.modules.result.api import router as result_router
+from app.modules.user.api import router as user_router
 import os
 
 # 创建FastAPI应用实例
@@ -29,6 +30,7 @@ if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 注册API路由
+app.include_router(user_router, prefix="/api/auth", tags=["auth"])
 app.include_router(upload_router, prefix="/api", tags=["upload"])
 app.include_router(generate_router, prefix="/api", tags=["generate"])
 app.include_router(score_router, prefix="/api", tags=["score"])
