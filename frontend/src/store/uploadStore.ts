@@ -32,7 +32,12 @@ export const useUploadStore = create<UploadState>((set) => ({
       file.id === id ? { ...file, ...updates } : file
     )
   })),
-  clearFiles: () => set({ uploadedFiles: [] }),
+  clearFiles: () => set({ 
+    uploadedFiles: [],
+    isUploading: false,
+    uploadProgress: 0,
+    error: null
+  }),
   setDragOver: (isDragOver) => set({ isDragOver }),
   setError: (error) => set({ error }),
 }));

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import UploadComponent from '../../components/upload/UploadComponent';
 import { useUpload } from '../../hooks/useUpload';
 import { generationService } from '../../services/generationService';
+import { resultService } from '../../services/resultService';
 import type { UploadFile } from '../../types/upload';
 import type { GeneratedImageInfo } from '../../types/generation';
 import './UploadPage.css';
@@ -9,20 +10,34 @@ import './UploadPage.css';
 type WorkflowStep = 'upload' | 'generating' | 'result';
 
 const UploadPage: React.FC = () => {
-  const { uploadedFiles, isUploading, uploadMultipleFiles } = useUpload();
+  const { uploadedFiles, isUploading, uploadMultipleFiles, clearFiles } = useUpload();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('upload');
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImageInfo[]>([]);
   const [error, setError] = useState<string>('');
+  const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
 
   const handleFilesSelected = async (files: File[]) => {
-    console.log('选择的文件:', files);
+    console.log('UploadPage: 选择的文件:', files);
     try {
+      console.log('UploadPage: 开始上传文件');
       await uploadMultipleFiles(files);
+      console.log('UploadPage: 文件上传完成');
     } catch (error) {
-      console.error('上传失败:', error);
+      console.error('UploadPage: 上传失败:', error);
     }
   };
+
+  // 页面加载时清理所有状态
+  useEffect(() => {
+    console.log('UploadPage: 页面加载，清理所有状态');
+    setCurrentStep('upload');
+    setGeneratedImages([]);
+    setGenerationProgress(0);
+    setError('');
+    setSelectedImageId(null);
+    clearFiles();
+  }, []);
 
   // 当上传完成后，自动开始生成流程
   useEffect(() => {
@@ -34,7 +49,9 @@ const UploadPage: React.FC = () => {
     }
   }, [uploadedFiles]);
 
+
   const startGeneration = async (imageId: number) => {
+    console.log('UploadPage: startGeneration 被调用，imageId:', imageId);
     setCurrentStep('generating');
     setGenerationProgress(0);
     setError('');
@@ -62,7 +79,28 @@ const UploadPage: React.FC = () => {
       setTimeout(async () => {
         // 获取生成结果
         const taskResponse = await generationService.getGenerationTask(response.original_image_id);
-        setGeneratedImages(taskResponse.generated_images);
+        const imagesWithResults = await Promise.all(
+          taskResponse.generated_images.map(async (image: GeneratedImageInfo) => {
+            try {
+              // 尝试获取评分结果
+              const result = await resultService.getResultByGeneratedId(image.id);
+              return { ...image, result };
+            } catch (error) {
+              // 如果评分结果不存在，返回原始图片信息
+              console.warn(`No result found for generated image ${image.id}:`, error);
+              return image;
+            }
+          })
+        );
+        
+        // 按照评分从高到低排序
+        const sortedImages = imagesWithResults.sort((a, b) => {
+          const scoreA = a.result?.overall_score || 0;
+          const scoreB = b.result?.overall_score || 0;
+          return scoreB - scoreA; // 从高到低排序
+        });
+        
+        setGeneratedImages(sortedImages);
         setCurrentStep('result');
       }, 1000);
       
@@ -77,6 +115,16 @@ const UploadPage: React.FC = () => {
     setGenerationProgress(0);
     setGeneratedImages([]);
     setError('');
+    setSelectedImageId(null);
+    clearFiles(); // 清理上传的文件列表
+  };
+
+  const openImageModal = (imageId: number) => {
+    setSelectedImageId(imageId);
+  };
+
+  const closeImageModal = () => {
+    setSelectedImageId(null);
   };
 
   return (
@@ -84,9 +132,9 @@ const UploadPage: React.FC = () => {
       <div className="upload-container">
         {currentStep === 'upload' && (
           <>
-            <h2>图片上传</h2>
+            <h2>智能构图分析</h2>
             <p className="upload-description">
-              上传您的图片，我们将为您提供智能构图分析和优化建议
+              上传您的图片，我们将为您提供专业的智能构图分析和优化建议
             </p>
             
             <UploadComponent
@@ -154,7 +202,7 @@ const UploadPage: React.FC = () => {
             <div className="generation-steps">
               <div className="step active">
                 <span className="step-icon">🔍</span>
-                <span>分析图片构图</span>
+                <span>智能构图分析</span>
               </div>
               <div className="step active">
                 <span className="step-icon">🎨</span>
@@ -171,10 +219,10 @@ const UploadPage: React.FC = () => {
         {currentStep === 'result' && (
           <div className="generation-result">
             <div className="result-header">
-              <h2>🎉 生成完成</h2>
-              <p className="result-description">
-                我们为您生成了 {generatedImages.length} 种构图方案
-              </p>
+              <div className="result-title">
+                <h2>🎉 生成完成</h2>
+                <span className="result-count">共 {generatedImages.length} 种方案</span>
+              </div>
               <button 
                 className="reset-btn"
                 onClick={resetWorkflow}
@@ -184,20 +232,31 @@ const UploadPage: React.FC = () => {
             </div>
             
             <div className="generated-images">
-              <h3>生成的图片</h3>
               <div className="image-grid">
                 {generatedImages.map((image, index) => (
                   <div key={image.id} className="image-item">
-                    <div className="image-container">
+                    <div 
+                      className="image-container clickable"
+                      onClick={() => openImageModal(image.id)}
+                    >
                       <img 
-                        src={`http://localhost:8000/static/generated/${image.filename}`}
+                        src={`http://localhost:8000/static/user1/results/${image.filename}`}
                         alt={`生成图片 ${index + 1}`}
                         onError={(e) => {
                           // 如果生成图片不存在，显示原始图片
                           const target = e.target as HTMLImageElement;
-                          target.src = `http://localhost:8000/static/original/${uploadedFiles[0]?.file.name}`;
+                          target.src = `http://localhost:8000/static/user1/original/${uploadedFiles[0]?.file.name}`;
                         }}
                       />
+                      {image.result && (
+                        <div className="score-badge">
+                          <span className="score-value">{image.result.overall_score}</span>
+                          <span className="score-label">分</span>
+                        </div>
+                      )}
+                      <div className="click-hint">
+                        <span>点击查看详情</span>
+                      </div>
                     </div>
                     <div className="image-info">
                       <span className="image-name">方案 {index + 1}</span>
@@ -205,6 +264,25 @@ const UploadPage: React.FC = () => {
                         {new Date(image.created_at).toLocaleString()}
                       </span>
                     </div>
+                    
+                    {/* 默认显示的评分和亮点 */}
+                    {image.result && (
+                      <div className="result-summary">
+                        <div className="score-section">
+                          <div className="score-display">
+                            <span className="score-number">{image.result.overall_score}</span>
+                            <span className="score-text">综合评分</span>
+                          </div>
+                        </div>
+                        {image.result.highlights && (
+                          <div className="highlights-section">
+                            <h4>✨ 亮点分析</h4>
+                            <p className="highlights-text">{image.result.highlights}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                   </div>
                 ))}
               </div>
@@ -221,6 +299,55 @@ const UploadPage: React.FC = () => {
             >
               重试
             </button>
+          </div>
+        )}
+
+        {/* 图片详情模态对话框 */}
+        {selectedImageId && (
+          <div className="modal-overlay" onClick={closeImageModal}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              {(() => {
+                const selectedImage = generatedImages.find(img => img.id === selectedImageId);
+                if (!selectedImage) return null;
+                
+                return (
+                  <>
+                    <div className="modal-header">
+                      <h3>图片详情</h3>
+                      <button className="modal-close" onClick={closeImageModal}>×</button>
+                    </div>
+                    <div className="modal-body">
+                      <div className="modal-image">
+                        <img 
+                          src={`http://localhost:8000/static/user1/results/${selectedImage.filename}`}
+                          alt="生成图片"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = `http://localhost:8000/static/user1/original/${uploadedFiles[0]?.file.name}`;
+                          }}
+                        />
+                      </div>
+                      {selectedImage.result && (
+                        <div className="modal-details">
+                          {selectedImage.result.ai_comment && (
+                            <div className="evaluation-section">
+                              <h4>🤖 AI评价</h4>
+                              <p className="evaluation-text">{selectedImage.result.ai_comment}</p>
+                            </div>
+                          )}
+                          {selectedImage.result.shooting_guidance && (
+                            <div className="guidance-section">
+                              <h4>📸 拍摄指导</h4>
+                              <p className="guidance-text">{selectedImage.result.shooting_guidance}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         )}
       </div>

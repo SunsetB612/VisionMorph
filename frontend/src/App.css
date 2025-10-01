@@ -9,8 +9,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
 }
 
 #root {
@@ -35,49 +35,50 @@ body {
 }
 
 .nav-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   padding: 0 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 70px;
+  height: 50px;
+  box-sizing: border-box;
 }
 
 .nav-logo {
-  font-size: 1.8rem;
+  font-size: 1.4rem;
   font-weight: 700;
-  color: #667eea;
+  color: #0ea5e9;
   text-decoration: none;
   transition: color 0.3s ease;
 }
 
 .nav-logo:hover {
-  color: #764ba2;
+  color: #0284c7;
 }
 
 .nav-menu {
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .nav-link {
   color: #333;
   text-decoration: none;
   font-weight: 500;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
   transition: all 0.3s ease;
   position: relative;
+  font-size: 0.9rem;
 }
 
 .nav-link:hover {
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  background: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
 }
 
 .nav-link.active {
-  background: linear-gradient(45deg, #667eea, #764ba2);
+  background: linear-gradient(45deg, #0ea5e9, #0284c7);
   color: white;
 }
 
@@ -85,6 +86,11 @@ body {
 @media (max-width: 768px) {
   .nav-container {
     padding: 0 1rem;
+    height: 45px;
+  }
+  
+  .nav-logo {
+    font-size: 1.2rem;
   }
   
   .nav-menu {
@@ -92,7 +98,7 @@ body {
   }
   
   .nav-link {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.9rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
   }
 }

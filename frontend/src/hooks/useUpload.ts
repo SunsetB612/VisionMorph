@@ -13,6 +13,7 @@ export const useUpload = () => {
     setUploading,
     addFile,
     updateFile,
+    clearFiles,
     setDragOver,
     setError
   } = useUploadStore();
@@ -102,6 +103,7 @@ export const useUpload = () => {
     error,
     uploadFile,
     uploadMultipleFiles,
+    clearFiles,
     handleDragOver,
     handleDragLeave,
     handleDrop,

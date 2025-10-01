@@ -49,7 +49,7 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
             WHERE i.user_id = :user_id
         """), {"user_id": user_id}).fetchone()[0]
         
-        for i in range(1, 4):
+        for i in range(1, 11):
             try:
                 # 文件命名规则：user{user_id}_img_{序号}_{时间戳}_generated_{i}.jpg
                 image_sequence = existing_count + i
@@ -76,6 +76,19 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
             raise ValueError("没有成功生成任何图片")
         
         db.commit()
+        
+        # 自动为刚生成的图片进行评分
+        try:
+            from app.modules.score.services import create_scores
+            from app.modules.score.schemas import ScoreRequest
+            
+            # 创建评分请求，对刚生成的图片进行评分
+            score_request = ScoreRequest(original_image_id=result[0])
+            score_response = create_scores(db, score_request)
+            print(f"自动评分完成，共评分 {score_response.scored_count} 张生成图片")
+        except Exception as score_error:
+            print(f"自动评分失败: {score_error}")
+            # 评分失败不影响生成流程，继续返回成功结果
         
         return GenerationResponse(
             original_image_id=result[0],

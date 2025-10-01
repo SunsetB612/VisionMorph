@@ -1,9 +1,12 @@
 // 生成模块类型定义
+import type { ResultInfo } from '../services/resultService';
+
 export interface GeneratedImageInfo {
   id: number;
   filename: string;
   file_path: string;
   created_at: string;
+  result?: ResultInfo;
 }
 
 export interface GenerationState {

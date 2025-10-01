@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import HomePage from './pages/home/HomePage';
 import UploadPage from './pages/upload/UploadPage';
-import GenerationPage from './pages/generation/GenerationPage';
+import NavLink from './components/navigation/NavLink';
 import './App.css';
 
 function App() {
@@ -15,8 +15,7 @@ function App() {
             </Link>
             <div className="nav-menu">
               <Link to="/" className="nav-link">首页</Link>
-              <Link to="/upload" className="nav-link">上传</Link>
-              <Link to="/generate" className="nav-link">生成</Link>
+              <NavLink to="/upload" className="nav-link">智能构图</NavLink>
             </div>
           </div>
         </nav>
@@ -24,7 +23,6 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/upload" element={<UploadPage />} />
-          <Route path="/generate" element={<GenerationPage />} />
         </Routes>
       </div>
     </Router>
