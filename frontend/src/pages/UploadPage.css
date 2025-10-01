@@ -1,0 +1,137 @@
+/* UploadPage.css */
+.upload-page {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.upload-container {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.upload-container h2 {
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+  font-size: 1.875rem;
+  font-weight: 600;
+}
+
+.upload-description {
+  color: #6b7280;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.uploaded-files {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.uploaded-files h3 {
+  color: #374151;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.file-size {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.file-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.status-pending {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.status-uploading {
+  color: #3b82f6;
+  font-size: 0.875rem;
+}
+
+.status-success {
+  color: #10b981;
+  font-size: 0.875rem;
+}
+
+.status-error {
+  color: #ef4444;
+  font-size: 0.875rem;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.upload-progress {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  text-align: center;
+  color: #1d4ed8;
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+  .upload-page {
+    padding: 1rem;
+  }
+  
+  .upload-container {
+    padding: 1.5rem;
+  }
+  
+  .file-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .file-status {
+    align-items: flex-start;
+  }
+}

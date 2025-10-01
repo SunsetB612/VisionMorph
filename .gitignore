@@ -1,0 +1,12 @@
+app/__pycache__/
+app/core/__pycache__/
+app/modules/__pycache__/
+app/modules/upload/__pycache__/
+
+static/
+
+DATABASE_DESIGN.md
+TECH_ARCHITECTURE.md
+MYSQL_MIGRATION_GUIDE.md
+
+.env

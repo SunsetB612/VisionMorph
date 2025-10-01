@@ -34,7 +34,7 @@
 ### 后端启动
 ```bash
 pip install -r requirements.txt
-python -m app.main
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 前端启动
