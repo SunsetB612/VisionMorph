@@ -1,8 +1,15 @@
 // 生成模块类型定义
+export interface GeneratedImageInfo {
+  id: number;
+  filename: string;
+  file_path: string;
+  created_at: string;
+}
+
 export interface GenerationState {
   isGenerating: boolean;
   generationProgress: number;
-  generatedImages: GeneratedImage[];
+  generatedImages: GeneratedImageInfo[];
   error: string | null;
 }
 

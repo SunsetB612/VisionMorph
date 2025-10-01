@@ -35,8 +35,7 @@ export const useCamera = () => {
       setState(prev => ({ ...prev, isVideoReady: true }));
     };
     
-    const onError = (e: Event) => {
-      console.error('视频播放错误:', e);
+    const onError = () => {
       setState(prev => ({ ...prev, error: '视频播放错误' }));
     };
 
@@ -56,9 +55,13 @@ export const useCamera = () => {
     const video = videoRef.current;
     if (!video || !state.stream || !state.isActive) return;
     
-    if (!video.srcObject) {
-      video.srcObject = state.stream;
-    }
+    // 强制设置新的视频流
+    video.srcObject = state.stream;
+    
+    // 确保视频播放
+    video.play().catch(() => {
+      // 自动播放失败，等待用户交互
+    });
   }, [state.stream, state.isActive]);
 
   const startCamera = useCallback(async () => {
@@ -87,7 +90,6 @@ export const useCamera = () => {
       }));
       
     } catch (error) {
-      console.error('摄像头启动失败:', error);
       setState(prev => ({ 
         ...prev, 
         error: error instanceof Error ? error.message : '摄像头启动失败'
@@ -154,7 +156,6 @@ export const useCamera = () => {
           resolve(file);
         }, 'image/jpeg', 0.9);
       } catch (error) {
-        console.error('拍照失败:', error);
         setState(prev => ({ ...prev, isCapturing: false }));
         reject(error);
       }
@@ -165,22 +166,71 @@ export const useCamera = () => {
     if (!state.isActive) return;
 
     try {
+      // 1. 停止当前流
       if (state.stream) {
         state.stream.getTracks().forEach(track => track.stop());
       }
 
-      const newFacingMode = state.facingMode === 'environment' ? 'user' : 'environment';
-      setState(prev => ({ ...prev, facingMode: newFacingMode, isVideoReady: false }));
+      // 2. 清理视频元素
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+        videoRef.current.load(); 
+      }
 
-      await startCamera();
+      // 3. 更新状态
+      const newFacingMode = state.facingMode === 'environment' ? 'user' : 'environment';
+      setState(prev => ({ 
+        ...prev, 
+        facingMode: newFacingMode, 
+        isVideoReady: false,
+        stream: null,
+        error: null
+      }));
+
+      // 4. 短暂延迟后重新启动摄像头
+      setTimeout(async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: newFacingMode
+            }
+          });
+          
+          setState(prev => ({ 
+            ...prev, 
+            stream, 
+            isActive: true
+          }));
+        } catch (error) {
+          // 如果指定摄像头失败，尝试通用摄像头
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: true
+            });
+            
+            setState(prev => ({ 
+              ...prev, 
+              stream, 
+              isActive: true
+            }));
+          } catch (fallbackError) {
+            setState(prev => ({ 
+              ...prev, 
+              error: `切换摄像头失败: ${fallbackError instanceof Error ? fallbackError.message : '未知错误'}` 
+            }));
+          }
+        }
+      }, 100); // 100ms延迟确保清理完成
+
     } catch (error) {
-      console.error('切换摄像头失败:', error);
       setState(prev => ({ 
         ...prev, 
         error: `切换摄像头失败: ${error instanceof Error ? error.message : '未知错误'}` 
       }));
     }
-  }, [state.isActive, state.stream, state.facingMode, startCamera]);
+  }, [state.isActive, state.stream, state.facingMode]);
 
   return {
     ...state,

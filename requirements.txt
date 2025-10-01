@@ -26,6 +26,7 @@ Pillow>=10.0.0
 python-dotenv==1.0.0
 httpx==0.25.2
 aiofiles==23.2.1
+requests==2.31.0
 
 # 可选：如果需要缓存功能
 # redis==5.0.1

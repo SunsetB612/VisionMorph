@@ -1,6 +1,7 @@
 import os
 import uuid
 import hashlib
+import time
 from io import BytesIO
 from fastapi import UploadFile, HTTPException
 from PIL import Image as PILImage
@@ -11,17 +12,42 @@ from app.modules.upload.schemas import UploadResponse, UploadErrorResponse, Uplo
 # 配置
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-UPLOAD_DIR = "static/original"  # 使用项目设计的存储路径
+BASE_STATIC_DIR = "static"  # 基础静态文件目录
 
 class UploadService:
     """上传服务类"""
     
     @staticmethod
+    def get_user_directory_structure(user_id: int) -> dict:
+        """获取用户目录结构"""
+        user_dir = os.path.join(BASE_STATIC_DIR, f"user{user_id}")
+        return {
+            "user_dir": user_dir,
+            "avatar_dir": os.path.join(user_dir, "avatar"),
+            "original_dir": os.path.join(user_dir, "original"),
+            "temp_dir": os.path.join(user_dir, "temp"),
+            "results_dir": os.path.join(user_dir, "results")
+        }
+    
+    @staticmethod
+    def create_user_directories(user_id: int) -> dict:
+        """为用户创建完整的目录结构"""
+        dirs = UploadService.get_user_directory_structure(user_id)
+        
+        # 创建所有目录
+        for dir_path in dirs.values():
+            os.makedirs(dir_path, exist_ok=True)
+        
+        return dirs
+    
+    @staticmethod
     def get_or_create_default_user():
         """获取或创建默认用户"""
-        with get_db() as session:
-            from sqlalchemy import text
-            
+        from app.core.database import SessionLocal
+        from sqlalchemy import text
+        
+        session = SessionLocal()
+        try:
             # 首先尝试获取默认用户
             result = session.execute(text("SELECT id FROM users WHERE username = 'admin'"))
             user = result.fetchone()
@@ -38,6 +64,8 @@ class UploadService:
             
             session.commit()
             return result.lastrowid
+        finally:
+            session.close()
     
     @staticmethod
     def validate_image(file: UploadFile) -> bool:
@@ -62,16 +90,40 @@ class UploadService:
             return (0, 0)
     
     @staticmethod
-    async def save_uploaded_file(file: UploadFile) -> tuple[str, str]:
-        """保存上传的文件并返回文件ID和路径"""
-        # 创建存储目录
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
+    def generate_user_filename(user_id: int, original_filename: str) -> tuple[str, str]:
+        """生成用户友好的文件名"""
+        # 获取文件扩展名
+        ext = os.path.splitext(original_filename)[1].lower()
         
-        # 生成唯一文件名
-        file_id = str(uuid.uuid4())
-        ext = os.path.splitext(file.filename)[1].lower()
-        filename = f"{file_id}{ext}"
-        file_path = os.path.join(UPLOAD_DIR, filename)
+        # 获取用户已上传的图片数量
+        from app.core.database import SessionLocal
+        from sqlalchemy import text
+        
+        session = SessionLocal()
+        try:
+            result = session.execute(text("""
+                SELECT COUNT(*) FROM images WHERE user_id = :user_id
+            """), {'user_id': user_id})
+            count = result.fetchone()[0] or 0
+        finally:
+            session.close()
+        
+        # 生成新的文件名：user{id}_img_{序号}_{时间戳}{扩展名}
+        timestamp = int(time.time() * 1000)
+        sequence = count + 1
+        filename = f"user{user_id}_img_{sequence:03d}_{timestamp}{ext}"
+        
+        return filename, str(sequence)
+    
+    @staticmethod
+    async def save_uploaded_file(file: UploadFile, user_id: int) -> tuple[str, str, str]:
+        """保存上传的文件并返回文件ID、路径和文件名"""
+        # 创建用户目录结构
+        dirs = UploadService.create_user_directories(user_id)
+        
+        # 生成用户友好的文件名
+        filename, sequence = UploadService.generate_user_filename(user_id, file.filename)
+        file_path = os.path.join(dirs["original_dir"], filename)
         
         # 读取文件内容
         content = await file.read()
@@ -80,7 +132,7 @@ class UploadService:
         with open(file_path, "wb") as buffer:
             buffer.write(content)
         
-        return file_id, file_path
+        return sequence, file_path, filename
     
     @staticmethod
     async def upload_image(file: UploadFile, user_id: int = None) -> UploadResponse:
@@ -111,19 +163,21 @@ class UploadService:
             await file.seek(0)
             
             # 保存文件
-            file_id, file_path = await UploadService.save_uploaded_file(file)
+            sequence, file_path, filename = await UploadService.save_uploaded_file(file, user_id)
             
             # 保存到数据库
-            with get_db() as session:
-                from sqlalchemy import text
-                
+            from app.core.database import SessionLocal
+            from sqlalchemy import text
+            
+            session = SessionLocal()
+            try:
                 # 使用原生SQL插入数据
                 result = session.execute(text("""
                     INSERT INTO images (user_id, filename, original_filename, file_path, file_size, mime_type, width, height)
                     VALUES (:user_id, :filename, :original_filename, :file_path, :file_size, :mime_type, :width, :height)
                 """), {
                     'user_id': user_id,
-                    'filename': f"{file_id}{os.path.splitext(file.filename)[1].lower()}",
+                    'filename': filename,
                     'original_filename': file.filename,
                     'file_path': file_path,
                     'file_size': len(content),
@@ -138,7 +192,7 @@ class UploadService:
                 result = session.execute(text("""
                     SELECT id, created_at FROM images 
                     WHERE filename = :filename
-                """), {'filename': f"{file_id}{os.path.splitext(file.filename)[1].lower()}"})
+                """), {'filename': filename})
                 
                 record = result.fetchone()
                 if not record:
@@ -146,12 +200,14 @@ class UploadService:
                 
                 image_id = record[0]
                 created_at = record[1]
+            finally:
+                session.close()
             
             return UploadResponse(
                 success=True,
                 message="图片上传成功",
                 image_id=image_id,
-                filename=f"{file_id}{os.path.splitext(file.filename)[1].lower()}",
+                filename=filename,
                 file_path=file_path,
                 file_size=len(content),
                 created_at=created_at
@@ -165,9 +221,11 @@ class UploadService:
     @staticmethod
     def get_upload_status(file_id: str) -> UploadStatusResponse:
         """获取上传状态"""
-        with get_db() as session:
-            from sqlalchemy import text
-            
+        from app.core.database import SessionLocal
+        from sqlalchemy import text
+        
+        session = SessionLocal()
+        try:
             # 查找匹配的图片记录
             result = session.execute(text("""
                 SELECT id, filename, file_path, file_size, created_at FROM images 
@@ -191,3 +249,5 @@ class UploadService:
                 filename=record[1],
                 file_path=record[2]
             )
+        finally:
+            session.close()

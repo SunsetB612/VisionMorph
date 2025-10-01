@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCamera } from '../../hooks/useCamera';
 import './CameraComponent.css';
 
@@ -11,6 +11,8 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
   onPhotoCaptured,
   onClose
 }) => {
+  const [isFlipping, setIsFlipping] = useState(false);
+  
   const {
     isActive,
     isCapturing,
@@ -46,6 +48,20 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
   const handleClose = () => {
     stopCamera();
     onClose();
+  };
+
+  const handleFlipCamera = async () => {
+    setIsFlipping(true);
+    try {
+      await flipCamera();
+    } catch (error) {
+      console.error('切换摄像头失败:', error);
+    } finally {
+      // 延迟重置切换状态，给用户足够时间看到反馈
+      setTimeout(() => {
+        setIsFlipping(false);
+      }, 500);
+    }
   };
 
 
@@ -93,7 +109,9 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
                 style={{ display: 'none' }}
               />
               <div className="camera-status">
-                {isVideoReady ? (
+                {isFlipping ? (
+                  <div className="status-flipping">🔄 切换摄像头中...</div>
+                ) : isVideoReady ? (
                   <div className="status-ready">✅ 摄像头已准备好</div>
                 ) : (
                   <div className="status-loading">⏳ 摄像头启动中...</div>
@@ -118,10 +136,11 @@ const CameraComponent: React.FC<CameraComponentProps> = ({
           <div className="camera-controls">
             <button
               className="flip-btn"
-              onClick={flipCamera}
+              onClick={handleFlipCamera}
+              disabled={isFlipping}
               title={`切换到${facingMode === 'environment' ? '前置' : '后置'}摄像头`}
             >
-              🔄 {facingMode === 'environment' ? '前置' : '后置'}
+              {isFlipping ? '🔄 切换中...' : `🔄 ${facingMode === 'environment' ? '前置' : '后置'}`}
             </button>
             <button
               className="capture-btn-outer"

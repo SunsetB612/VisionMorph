@@ -6,6 +6,7 @@ export interface UploadFile {
   status: 'pending' | 'uploading' | 'success' | 'error';
   progress: number;
   error?: string;
+  imageId?: number;
 }
 
 export interface UploadState {

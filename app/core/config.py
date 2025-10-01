@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "static"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     
+    # 项目根目录
+    @property
+    def BASE_DIR(self) -> str:
+        """获取项目根目录"""
+        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -1,3 +1,4 @@
+__pycache__/
 app/__pycache__/
 app/core/__pycache__/
 app/modules/__pycache__/
@@ -5,8 +6,11 @@ app/modules/upload/__pycache__/
 
 static/
 
+PROJECT_STRUCTURE.md
 DATABASE_DESIGN.md
 TECH_ARCHITECTURE.md
 MYSQL_MIGRATION_GUIDE.md
+GENERATION_MODULE_README.md
+NEW_FILE_STRUCTURE.md
 
 .env

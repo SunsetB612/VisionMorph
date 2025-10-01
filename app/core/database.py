@@ -26,9 +26,8 @@ def get_db_connection():
     """获取数据库连接"""
     return engine.connect()
 
-@contextmanager
 def get_db():
-    """数据库连接上下文管理器"""
+    """获取数据库会话"""
     session = SessionLocal()
     try:
         yield session

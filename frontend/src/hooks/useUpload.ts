@@ -37,7 +37,8 @@ export const useUpload = () => {
       
       updateFile(fileId, { 
         status: 'success', 
-        progress: 100 
+        progress: 100,
+        imageId: response.image_id
       });
       
       return response;
