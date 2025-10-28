@@ -36,6 +36,8 @@ class GeneratedImage:
     original_image_id: int = 0
     filename: str = ""
     file_path: str = ""
+    view_angles: Optional[str] = None
+    prompt_file_path: Optional[str] = None  # 新增：对应的prompt文件路径
     created_at: Optional[datetime] = None
 
 @dataclass

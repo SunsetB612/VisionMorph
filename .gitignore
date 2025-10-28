@@ -18,3 +18,5 @@ AUTH_SYSTEM_README.md
 
 clear_database.py
 restore_default_user.py
+
+.idea/

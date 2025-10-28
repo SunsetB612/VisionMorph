@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import UploadComponent from '../../components/upload/UploadComponent';
+import ViewAngleSelector from '../../components/viewangle/ViewAngleSelector';
+import type { ViewAngle } from '../../components/viewangle/ViewAngleSelector';
 import { useUpload } from '../../hooks/useUpload';
 import { generationService } from '../../services/generationService';
 import { resultService } from '../../services/resultService';
@@ -8,7 +10,7 @@ import type { UploadFile } from '../../types/upload';
 import type { GeneratedImageInfo } from '../../types/generation';
 import './UploadPage.css';
 
-type WorkflowStep = 'upload' | 'generating' | 'result';
+type WorkflowStep = 'upload' | 'angle-selection' | 'generating' | 'result';
 
 const UploadPage: React.FC = () => {
   const { uploadedFiles, isUploading, uploadMultipleFiles, clearFiles } = useUpload();
@@ -18,6 +20,8 @@ const UploadPage: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImageInfo[]>([]);
   const [error, setError] = useState<string>('');
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
+  const [selectedAngles, setSelectedAngles] = useState<ViewAngle[]>([]);
+  const [uploadedImageId, setUploadedImageId] = useState<number | null>(null);
 
   const handleFilesSelected = async (files: File[]) => {
     console.log('UploadPage: 选择的文件:', files);
@@ -38,22 +42,26 @@ const UploadPage: React.FC = () => {
     setGenerationProgress(0);
     setError('');
     setSelectedImageId(null);
+    setSelectedAngles([]);
+    setUploadedImageId(null);
     clearFiles();
   }, []);
 
-  // 当上传完成后，自动开始生成流程
+  // 当上传完成后，跳转到视角选择步骤
   useEffect(() => {
     if (uploadedFiles.length > 0 && uploadedFiles.every(file => file.status === 'success')) {
       const firstSuccessFile = uploadedFiles.find(file => file.status === 'success');
       if (firstSuccessFile && firstSuccessFile.imageId) {
-        startGeneration(firstSuccessFile.imageId);
+        console.log('UploadPage: 上传完成，进入视角选择步骤');
+        setUploadedImageId(firstSuccessFile.imageId);
+        setCurrentStep('angle-selection');
       }
     }
   }, [uploadedFiles]);
 
 
-  const startGeneration = async (imageId: number) => {
-    console.log('UploadPage: startGeneration 被调用，imageId:', imageId);
+  const startGeneration = async (imageId: number, angles: ViewAngle[]) => {
+    console.log('UploadPage: startGeneration 被调用，imageId:', imageId, '视角:', angles);
     setCurrentStep('generating');
     setGenerationProgress(0);
     setError('');
@@ -70,8 +78,11 @@ const UploadPage: React.FC = () => {
         });
       }, 500);
 
-      // 调用生成API
-      const response = await generationService.createGenerationTask({ original_image_id: imageId });
+      // 调用生成API，传递视角参数
+      const response = await generationService.createGenerationTask({ 
+        original_image_id: imageId,
+        view_angles: angles 
+      });
       
       // 完成进度
       clearInterval(progressInterval);
@@ -112,12 +123,28 @@ const UploadPage: React.FC = () => {
     }
   };
 
+  const handleAngleConfirm = (angles: ViewAngle[]) => {
+    console.log('用户选择的视角:', angles);
+    setSelectedAngles(angles);
+    if (uploadedImageId) {
+      startGeneration(uploadedImageId, angles);
+    }
+  };
+
+  const handleAngleCancel = () => {
+    // 取消视角选择，返回上传步骤
+    setCurrentStep('upload');
+    setUploadedImageId(null);
+  };
+
   const resetWorkflow = () => {
     setCurrentStep('upload');
     setGenerationProgress(0);
     setGeneratedImages([]);
     setError('');
     setSelectedImageId(null);
+    setSelectedAngles([]);
+    setUploadedImageId(null);
     clearFiles(); // 清理上传的文件列表
   };
 
@@ -182,12 +209,26 @@ const UploadPage: React.FC = () => {
           </>
         )}
 
+        {currentStep === 'angle-selection' && (
+          <ViewAngleSelector
+            onConfirm={handleAngleConfirm}
+            onCancel={handleAngleCancel}
+          />
+        )}
+
         {currentStep === 'generating' && (
           <div className="generation-progress">
             <h2>🎨 正在生成图片</h2>
             <p className="generation-description">
               我们的AI正在为您生成多种构图方案，请稍候...
             </p>
+            
+            {selectedAngles.length > 0 && (
+              <div className="selected-angles-display">
+                <span className="angles-label">📐 已选择的视角：</span>
+                <span className="angles-values">{selectedAngles.join('、')}</span>
+              </div>
+            )}
             
             <div className="progress-container">
               <div className="progress-bar">

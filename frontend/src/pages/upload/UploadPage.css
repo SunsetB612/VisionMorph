@@ -141,6 +141,27 @@
   line-height: 1.5;
 }
 
+.selected-angles-display {
+  display: inline-block;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.angles-label {
+  color: #4f46e5;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.angles-values {
+  color: #6366f1;
+  font-weight: 600;
+}
+
 .progress-container {
   margin: 2rem 0;
 }

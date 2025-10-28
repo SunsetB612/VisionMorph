@@ -25,26 +25,44 @@
 - **学习资源** - 构图知识和摄影技巧分享
 
 ## 🛠️ 技术栈
-- 后端: Python + FastAPI
+- 后端: Python + FastAPI + MySQL
 - 前端: React + TypeScript + Vite
 - AI模块: 图片生成 + 智能评分 + 构图分析
+- 数据库: MySQL 8.0+
+- 存储: 本地文件系统（用户隔离）
 
 ## 快速开始
 
-### 后端启动
+### 1. 安装依赖
 ```bash
 pip install -r requirements.txt
+```
+
+### 2. 配置数据库
+
+```bash
+mv .env.example .env
+```
+
+### 3. 初始化数据库
+
+```bash
+python -m app.core.database
+```
+
+### 4. 启动后端
+```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 前端启动
+### 5. 启动前端
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-### 访问地址
+### 6. 访问地址
 - 后端API: http://localhost:8000
 - 前端应用: http://localhost:5173
 - API文档: http://localhost:8000/docs

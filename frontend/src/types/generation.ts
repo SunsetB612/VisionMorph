@@ -5,8 +5,16 @@ export interface GeneratedImageInfo {
   id: number;
   filename: string;
   file_path: string;
+  view_angles?: string | null;
+  prompt_file_path?: string | null;
+  prompt_content?: string | null;
   created_at: string;
   result?: ResultInfo;
+}
+
+export interface GenerationRequest {
+  original_image_id: number;
+  view_angles?: string[];
 }
 
 export interface GenerationState {
