@@ -67,31 +67,36 @@ const UploadPage: React.FC = () => {
     setError('');
 
     try {
-      // 模拟生成进度
-      const progressInterval = setInterval(() => {
-        setGenerationProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
+      // 使用 SSE 流式接口获取实时进度
+      await generationService.createGenerationTaskWithProgress(
+        { 
+          original_image_id: imageId,
+          view_angles: angles 
+        },
+        (progress) => {
+          // 实时更新进度
+          console.log('📊 进度更新:', progress);
+          
+          if (progress.total > 0) {
+            // 根据当前/总数计算百分比
+            const percentage = Math.round((progress.current / progress.total) * 100);
+            setGenerationProgress(percentage);
           }
-          return prev + Math.random() * 10;
-        });
-      }, 500);
-
-      // 调用生成API，传递视角参数
-      const response = await generationService.createGenerationTask({ 
-        original_image_id: imageId,
-        view_angles: angles 
-      });
+          
+          // 可选：显示进度消息
+          if (progress.message) {
+            console.log('💬 进度消息:', progress.message);
+          }
+        }
+      );
       
-      // 完成进度
-      clearInterval(progressInterval);
+      // SSE 完成后，确保进度为 100%
       setGenerationProgress(100);
       
       // 等待一下让用户看到100%进度
       setTimeout(async () => {
         // 获取生成结果
-        const taskResponse = await generationService.getGenerationTask(response.original_image_id);
+        const taskResponse = await generationService.getGenerationTask(imageId);
         const imagesWithResults = await Promise.all(
           taskResponse.generated_images.map(async (image: GeneratedImageInfo) => {
             try {

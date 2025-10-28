@@ -11,7 +11,7 @@ from app.modules.generate.schemas import GenerationRequest, GenerationResponse, 
 
 # 添加 DiffSynth-Studio 目录到路径以导入 pi.py
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'DiffSynth-Studio'))
-from pi import generate_prompts_with_doubao, qwen_generate_images_from_prompts
+from pi import generate_prompts_with_doubao, qwen_generate_images_from_prompts, qwen_generate_images_from_prompts_with_progress
 
 
 def create_generation(db: Session, request: GenerationRequest) -> GenerationResponse:
@@ -170,6 +170,144 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
         db.rollback()
         print(f"生成任务失败: {e}")
         raise ValueError(f"生成失败: {str(e)}")
+
+def create_generation_with_progress(db: Session, request: GenerationRequest):
+    """创建生成任务（生成器版本，用于 SSE 进度推送）"""
+    
+    try:
+        # ========== 步骤1：获取原始图片信息和用户ID ==========
+        result = db.execute(text("""
+            SELECT i.id, i.filename, i.file_path, i.user_id, u.username 
+            FROM images i 
+            JOIN users u ON i.user_id = u.id 
+            WHERE i.id = :image_id
+        """), {"image_id": request.original_image_id}).fetchone()
+        
+        if not result:
+            yield {
+                "status": "failed",
+                "current": 0,
+                "total": 0,
+                "message": "原始图片不存在"
+            }
+            return
+        
+        original_image_id = result[0]
+        original_file_path = result[2]
+        user_id = result[3]
+        username = result[4]
+        
+        # 处理用户选择的视角
+        view_angles_list = request.view_angles if request.view_angles else ["不限"]
+        view_angles_str = ','.join(view_angles_list)
+        
+        if not os.path.exists(original_file_path):
+            yield {
+                "status": "failed",
+                "current": 0,
+                "total": 0,
+                "message": f"原始图片文件不存在: {original_file_path}"
+            }
+            return
+        
+        # 创建用户目录结构
+        from app.modules.upload.services import UploadService
+        dirs = UploadService.create_user_directories(user_id)
+        results_dir = dirs["results_dir"]
+        
+        # 创建prompts目录
+        user_base_dir = os.path.dirname(results_dir)
+        prompts_dir = os.path.join(user_base_dir, "prompts")
+        os.makedirs(prompts_dir, exist_ok=True)
+        
+        # ========== 步骤2：生成 Prompts ==========
+        api_key = os.getenv("DOUBAO_API_KEY", "1b2e7082-a359-4e1a-9c3b-f7c1349b9d3f")
+        
+        try:
+            generated_prompts = generate_prompts_with_doubao(
+                api_key=api_key,
+                local_image_path=original_file_path,
+                user_selected_views=view_angles_list,
+                user_id=user_id
+            )
+        except Exception as prompt_error:
+            print(f"⚠️  Prompt 生成失败: {prompt_error}")
+            generated_prompts = []
+        
+        # ========== 步骤3：调用 pi.py 生成图片（生成器版本）==========
+        # 转发 pi.py 的进度信息
+        for progress in qwen_generate_images_from_prompts_with_progress(user_id=user_id):
+            yield progress
+        
+        # ========== 步骤4：扫描文件并记录到数据库 ==========
+        prompt_files = sorted([f for f in os.listdir(prompts_dir) if f.startswith(f"user{user_id}_") and f.endswith('.txt')])
+        generated_image_files = sorted([f for f in os.listdir(results_dir) if f.startswith(f"user{user_id}_") and f.endswith('.jpg')])
+        
+        generated_count = 0
+        
+        for img_file in generated_image_files:
+            try:
+                img_file_path = os.path.join(results_dir, img_file)
+                
+                # 匹配对应的 prompt 文件
+                img_parts = img_file.replace('_generated_', '_SPLIT_').split('_SPLIT_')
+                if len(img_parts) >= 2:
+                    prompt_prefix = img_parts[0]
+                    prompt_suffix = img_parts[1].replace('.jpg', '.txt')
+                    matching_prompt_file = f"{prompt_prefix}_prompt_{prompt_suffix}"
+                    prompt_file_path = os.path.join(prompts_dir, matching_prompt_file)
+                else:
+                    prompt_file_path = None
+                
+                if not prompt_file_path or not os.path.exists(prompt_file_path):
+                    prompt_file_path = None
+                
+                # 保存到数据库
+                db.execute(text("""
+                    INSERT INTO generated_images (original_image_id, filename, file_path, view_angles, prompt_file_path, created_at)
+                    VALUES (:original_image_id, :filename, :file_path, :view_angles, :prompt_file_path, NOW())
+                """), {
+                    "original_image_id": original_image_id,
+                    "filename": img_file,
+                    "file_path": img_file_path,
+                    "view_angles": view_angles_str,
+                    "prompt_file_path": prompt_file_path
+                })
+                generated_count += 1
+                
+            except Exception as e:
+                print(f"记录图片 {img_file} 失败: {e}")
+                continue
+        
+        db.commit()
+        
+        # 自动评分
+        try:
+            from app.modules.score.services import create_scores
+            from app.modules.score.schemas import ScoreRequest
+            score_request = ScoreRequest(original_image_id=original_image_id)
+            score_response = create_scores(db, score_request)
+            print(f"✅ 自动评分完成，共评分 {score_response.scored_count} 张生成图片")
+        except Exception as score_error:
+            print(f"⚠️  自动评分失败: {score_error}")
+        
+        # 最终完成消息（虽然 pi.py 已经发过 completed，这里再确认一次）
+        yield {
+            "status": "completed",
+            "current": generated_count,
+            "total": generated_count,
+            "message": f"成功为用户 {username} 生成 {generated_count} 张图片"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"生成任务失败: {e}")
+        yield {
+            "status": "failed",
+            "current": 0,
+            "total": 0,
+            "message": f"生成失败: {str(e)}"
+        }
 
 def get_generated_images(db: Session, original_image_id: int) -> List[GeneratedImageInfo]:
     """获取生成的图片列表"""

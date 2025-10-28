@@ -25,3 +25,10 @@ class GeneratedImageInfo(BaseModel):
     prompt_file_path: Optional[str] = None
     prompt_content: Optional[str] = None  # 读取的prompt文本内容
     created_at: datetime
+
+class GenerationProgressUpdate(BaseModel):
+    """SSE 进度更新"""
+    status: str  # started/generating/completed/failed
+    current: int  # 当前已完成数量
+    total: int  # 总数量
+    message: str  # 提示信息

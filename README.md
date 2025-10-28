@@ -66,3 +66,6 @@ npm run dev
 - 后端API: http://localhost:8000
 - 前端应用: http://localhost:5173
 - API文档: http://localhost:8000/docs
+
+## 📖 文档
+- [Static 文件存储路径说明](static_file_storage_guide.md)

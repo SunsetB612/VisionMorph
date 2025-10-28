@@ -1,5 +1,5 @@
 // API基础配置
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // 通用API请求函数
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {

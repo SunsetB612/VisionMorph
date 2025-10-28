@@ -215,6 +215,21 @@ def qwen_generate_images_from_prompts(user_id=1):
     
     :param user_id: 用户ID（必填），用于定位用户专属目录
     """
+    # 调用生成器版本，但不yield（保持原有同步行为）
+    for _ in qwen_generate_images_from_prompts_with_progress(user_id):
+        pass  # 忽略进度信息，保持原函数行为
+
+def qwen_generate_images_from_prompts_with_progress(user_id=1):
+    """
+    读取用户专属提示词文件，生成对应的多视角图片（生成器版本，支持SSE进度推送）
+    
+    路径逻辑：
+      - 读取提示词：static/user{id}/prompts/user{id}_img_{序号}_{timestamp}_prompt_{i}.txt
+      - 保存图片：static/user{id}/results/user{id}_img_{序号}_{timestamp}_generated_{i}.jpg
+    
+    :param user_id: 用户ID（必填），用于定位用户专属目录
+    :yield: dict - 进度信息 {"status": "generating", "current": N, "total": M, "message": "..."}
+    """
     # 1. 显存优化配置
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     gc.enable()
@@ -346,6 +361,15 @@ def qwen_generate_images_from_prompts(user_id=1):
     user_results_dir = f"static/user{user_id}/results"
     os.makedirs(user_results_dir, exist_ok=True)
     print(f"📂 图片将保存到：{user_results_dir}")
+    
+    # 🆕 SSE进度推送：初始化完成，开始生成
+    total_images = len(view_prompts)
+    yield {
+        "status": "started",
+        "current": 0,
+        "total": total_images,
+        "message": f"开始生成 {total_images} 张图片..."
+    }
 
     # 6. 逐一生成图片（命名与提示词完全对应）
     print("\n🚀 开始生成多角度图片...")
@@ -371,9 +395,24 @@ def qwen_generate_images_from_prompts(user_id=1):
             print(f"✅ 生成完成：")
             print(f"   提示词：{os.path.join(user_prompt_dir, prompt_file)}")
             print(f"   图片：{image_path}\n")
+            
+            # 🆕 SSE进度推送：每生成一张图就推送进度
+            yield {
+                "status": "generating",
+                "current": idx,
+                "total": total_images,
+                "message": f"已生成 {idx}/{total_images} 张图片"
+            }
         
         except Exception as e:
             print(f"❌ 生成失败（{core_filename}）: {str(e)}\n")
+            # 即使失败也推送进度（标记为当前数量）
+            yield {
+                "status": "generating",
+                "current": idx,
+                "total": total_images,
+                "message": f"第 {idx} 张图片生成失败，继续生成下一张..."
+            }
         
         finally:
             # 强制清理显存
@@ -381,6 +420,14 @@ def qwen_generate_images_from_prompts(user_id=1):
             torch.cuda.reset_peak_memory_stats()
             gc.collect()
 
+    # 🆕 SSE进度推送：全部完成
+    yield {
+        "status": "completed",
+        "current": total_images,
+        "total": total_images,
+        "message": f"生成完成！共生成 {total_images} 张图片"
+    }
+    
     print("🎉 所有图片生成流程结束！")
     print(f"📌 关联示例：")
     print(f"   提示词：{user_prompt_dir}/{prompt_files[0]}")
