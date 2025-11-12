@@ -1,10 +1,7 @@
 """
 数据库连接和初始化模块
 """
-import os
 from pathlib import Path
-from typing import Optional
-from contextlib import contextmanager
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
@@ -67,9 +64,9 @@ def init_database():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """))
             
-            # 3. 创建生成效果图表
+            # 3. 创建临时生成图表
             conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS generated_images (
+                CREATE TABLE IF NOT EXISTS temp_images (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     original_image_id INT NOT NULL,
                     filename VARCHAR(255) NOT NULL,
@@ -82,17 +79,29 @@ def init_database():
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """))
             
-            # 4. 创建图片评价表
+            # 4. 创建最终结果图表
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS result_images (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    temp_image_id INT NOT NULL UNIQUE,
+                    filename VARCHAR(255) NOT NULL,
+                    file_path VARCHAR(500) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (temp_image_id) REFERENCES temp_images(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """))
+            
+            # 5. 创建图片评价表
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS image_evaluations (
                     id INT AUTO_INCREMENT PRIMARY KEY,
-                    generated_image_id INT UNIQUE NOT NULL,
+                    result_image_id INT UNIQUE NOT NULL,
                     overall_score INT CHECK (overall_score >= 1 AND overall_score <= 100),
                     highlights TEXT,
                     ai_comment TEXT,
                     shooting_guidance TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (generated_image_id) REFERENCES generated_images(id) ON DELETE CASCADE
+                    FOREIGN KEY (result_image_id) REFERENCES result_images(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """))
             
@@ -112,9 +121,11 @@ def create_indexes(conn):
         ("idx_users_username", "users", "username"),
         ("idx_images_user_id", "images", "user_id"),
         ("idx_images_created_at", "images", "created_at"),
-        ("idx_generated_images_original_id", "generated_images", "original_image_id"),
-        ("idx_generated_images_created_at", "generated_images", "created_at"),
-        ("idx_image_evaluations_generated_id", "image_evaluations", "generated_image_id"),
+        ("idx_temp_images_original_id", "temp_images", "original_image_id"),
+        ("idx_temp_images_created_at", "temp_images", "created_at"),
+        ("idx_result_images_temp_id", "result_images", "temp_image_id"),
+        ("idx_result_images_created_at", "result_images", "created_at"),
+        ("idx_image_evaluations_result_id", "image_evaluations", "result_image_id"),
         ("idx_image_evaluations_score", "image_evaluations", "overall_score"),
         ("idx_image_evaluations_created_at", "image_evaluations", "created_at")
     ]

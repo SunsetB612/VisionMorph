@@ -8,6 +8,7 @@ from typing import Optional, List
 class ResultImageInfo(BaseModel):
     """结果图片信息"""
     generated_image_id: int
+    result_image_id: int
     filename: str
     file_path: str
     overall_score: int = Field(..., ge=1, le=100, description="总体评分1-100")
@@ -17,6 +18,7 @@ class ResultImageInfo(BaseModel):
 class ResultDetailInfo(BaseModel):
     """结果详细信息"""
     generated_image_id: int
+    result_image_id: int
     filename: str
     file_path: str
     overall_score: int = Field(..., ge=1, le=100, description="总体评分1-100")

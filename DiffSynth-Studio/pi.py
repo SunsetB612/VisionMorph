@@ -211,7 +211,7 @@ def qwen_generate_images_from_prompts(user_id=1):
     
     路径逻辑：
       - 读取提示词：static/user{id}/prompts/user{id}_img_{序号}_{timestamp}_prompt_{i}.txt
-      - 保存图片：static/user{id}/results/user{id}_img_{序号}_{timestamp}_generated_{i}.jpg
+      - 保存图片：static/user{id}/temp/user{id}_img_{序号}_{timestamp}_temp_{i}.jpg
     
     :param user_id: 用户ID（必填），用于定位用户专属目录
     """
@@ -225,7 +225,7 @@ def qwen_generate_images_from_prompts_with_progress(user_id=1):
     
     路径逻辑：
       - 读取提示词：static/user{id}/prompts/user{id}_img_{序号}_{timestamp}_prompt_{i}.txt
-      - 保存图片：static/user{id}/results/user{id}_img_{序号}_{timestamp}_generated_{i}.jpg
+      - 保存图片：static/user{id}/temp/user{id}_img_{序号}_{timestamp}_temp_{i}.jpg
     
     :param user_id: 用户ID（必填），用于定位用户专属目录
     :yield: dict - 进度信息 {"status": "generating", "current": N, "total": M, "message": "..."}
@@ -358,9 +358,9 @@ def qwen_generate_images_from_prompts_with_progress(user_id=1):
     print(f"✅ 成功读取{len(view_prompts)}个提示词（时间戳：{timestamp}，顺序与文件序号一致）")
 
     # 5. 定义用户专属的图片保存目录
-    user_results_dir = f"static/user{user_id}/results"
-    os.makedirs(user_results_dir, exist_ok=True)
-    print(f"📂 图片将保存到：{user_results_dir}")
+    user_temp_dir = f"static/user{user_id}/temp"
+    os.makedirs(user_temp_dir, exist_ok=True)
+    print(f"📂 图片将保存到：{user_temp_dir}")
     
     # 🆕 SSE进度推送：初始化完成，开始生成
     total_images = len(view_prompts)
@@ -374,10 +374,10 @@ def qwen_generate_images_from_prompts_with_progress(user_id=1):
     # 6. 逐一生成图片（命名与提示词完全对应）
     print("\n🚀 开始生成多角度图片...")
     for idx, (prompt, prompt_file) in enumerate(zip(view_prompts, prompt_files), 1):
-        # 提取核心文件名并替换 "_prompt_" 为 "_generated_"（与 generate 模块对齐）
-        core_filename = os.path.splitext(prompt_file)[0].replace("_prompt_", "_generated_")
+        # 提取核心文件名并替换 "_prompt_" 为 "_temp_"（与 generate 模块对齐）
+        core_filename = os.path.splitext(prompt_file)[0].replace("_prompt_", "_temp_")
         image_filename = f"{core_filename}.jpg"
-        image_path = os.path.join(user_results_dir, image_filename)
+        image_path = os.path.join(user_temp_dir, image_filename)
         
         try:
             # 生成图片
@@ -431,9 +431,9 @@ def qwen_generate_images_from_prompts_with_progress(user_id=1):
     print("🎉 所有图片生成流程结束！")
     print(f"📌 关联示例：")
     print(f"   提示词：{user_prompt_dir}/{prompt_files[0]}")
-    # 注意：图片名需要将 prompt 替换为 generated
-    image_example = os.path.splitext(prompt_files[0])[0].replace("_prompt_", "_generated_") + ".jpg"
-    print(f"   对应图片：{user_results_dir}/{image_example}")
+    # 注意：图片名需要将 prompt 替换为 temp
+    image_example = os.path.splitext(prompt_files[0])[0].replace("_prompt_", "_temp_") + ".jpg"
+    print(f"   对应图片：{user_temp_dir}/{image_example}")
 
 # ==================== 执行入口（本地/服务器切换）====================
 if __name__ == "__main__":

@@ -7,9 +7,10 @@ static/
 └── user{用户ID}/
     ├── original/      # 用户上传的原始图片
     ├── prompts/       # AI 生成的提示词文件
-    ├── results/       # AI 生成的效果图
+    ├── temp/          # AI 生成模块输出（临时）
+    ├── excel/         # 构图分析与拍摄指导 Excel 报告
     ├── avatar/        # 用户头像（预留）
-    └── temp/          # 临时文件（预留）
+    └── results/       # Panorama 裁剪结果
 ```
 
 **示例**：
@@ -22,10 +23,10 @@ static/
     │   ├── user1_img_001_1698765432000_prompt_1.txt
     │   ├── user1_img_001_1698765432000_prompt_2.txt
     │   └── user1_img_001_1698765432000_prompt_3.txt
-    └── results/
-        ├── user1_img_001_1698765432000_generated_1.jpg
-        ├── user1_img_001_1698765432000_generated_2.jpg
-        └── user1_img_001_1698765432000_generated_3.jpg
+    └── temp/
+        ├── user1_img_001_1698765432000_temp_1.jpg
+        ├── user1_img_001_1698765432000_temp_2.jpg
+        └── user1_img_001_1698765432000_temp_3.jpg
 ```
 
 ---
@@ -48,9 +49,25 @@ static/
 
 ### 3. 生成图片
 ```
-格式：user{用户ID}_img_{序号}_{时间戳}_generated_{索引}.jpg
-示例：user1_img_001_1698765432000_generated_1.jpg
+格式：user{用户ID}_img_{序号}_{时间戳}_temp_{索引}.jpg
+示例：user1_img_001_1698765432000_temp_1.jpg
+位置：static/user{用户ID}/temp/
+```
+
+### 4. 裁剪结果
+```
+格式：{原图文件名前缀}_result_{时间戳}_{索引}.jpg
+示例：user1_img_001_1698765432000_result_1.jpg
 位置：static/user{用户ID}/results/
+备注：数据库 view_angles 字段以 result:{区域类型}:{x1},{y1},{x2},{y2} 保存裁剪区域信息
+```
+
+### 5. 构图分析报告
+```
+格式：user{用户ID}_crop_report.xlsx（同一个文件追加写入）
+示例：user1_crop_report.xlsx
+位置：static/user{用户ID}/excel/
+备注：包含裁剪结果、构图评分、拍摄建议等信息
 ```
 
 ---
@@ -64,8 +81,8 @@ static/
          └─ 前缀：user1_img_001_1698765432000
             ├─ user1_img_001_1698765432000_prompt_1.txt
             ├─ user1_img_001_1698765432000_prompt_2.txt
-            ├─ user1_img_001_1698765432000_generated_1.jpg
-            └─ user1_img_001_1698765432000_generated_2.jpg
+            ├─ user1_img_001_1698765432000_temp_1.jpg
+            └─ user1_img_001_1698765432000_temp_2.jpg
 ```
 
 ---

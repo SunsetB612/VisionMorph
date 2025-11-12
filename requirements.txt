@@ -28,5 +28,24 @@ httpx==0.25.2
 aiofiles==23.2.1
 requests==2.31.0
 
+# ========== 图像处理和机器学习依赖（用于 total.py） ==========
+# 计算机视觉
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# 深度学习框架
+torch>=2.0.0
+torchvision>=0.15.0
+
+# 数据分析和可视化
+pandas>=2.0.0
+matplotlib>=3.7.0
+
+# 自然语言处理和预训练模型
+transformers>=4.30.0
+
+# Excel 文件处理（用于 pandas to_excel）
+openpyxl>=3.1.0
+
 # 可选：如果需要缓存功能
 # redis==5.0.1

@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     # 文件存储
     UPLOAD_DIR: str = "static"
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
+
+    # 裁剪配置
+    YOLO_MODEL_PATH: Optional[str] = None
+    MAX_CROP_TOP_N: int = 5
+
+    # 豆包拍摄建议
+    DOUBAO_API_KEY: Optional[str] = None
+    DOUBAO_MODEL_NAME: str = "doubao-seed-1-6-251015"
     
     # 项目根目录
     @property

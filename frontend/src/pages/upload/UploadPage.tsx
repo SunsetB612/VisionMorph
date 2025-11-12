@@ -5,12 +5,14 @@ import type { ViewAngle } from '../../components/viewangle/ViewAngleSelector';
 import { useUpload } from '../../hooks/useUpload';
 import { generationService } from '../../services/generationService';
 import { resultService } from '../../services/resultService';
+import { cropService } from '../../services/cropService';
+import type { ResultInfo, ResultListItem } from '../../services/resultService';
 import { useAuthStore } from '../../store/authStore';
 import type { UploadFile } from '../../types/upload';
 import type { GeneratedImageInfo } from '../../types/generation';
 import './UploadPage.css';
 
-type WorkflowStep = 'upload' | 'angle-selection' | 'generating' | 'result';
+type WorkflowStep = 'upload' | 'angle-selection' | 'generating' | 'crop' | 'result';
 
 const UploadPage: React.FC = () => {
   const { uploadedFiles, isUploading, uploadMultipleFiles, clearFiles } = useUpload();
@@ -22,6 +24,28 @@ const UploadPage: React.FC = () => {
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
   const [selectedAngles, setSelectedAngles] = useState<ViewAngle[]>([]);
   const [uploadedImageId, setUploadedImageId] = useState<number | null>(null);
+  const [croppingMessage, setCroppingMessage] = useState<string>('');
+
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || 'http://localhost:8000';
+
+  const buildStaticUrl = (path?: string | null) => {
+    if (!path) {
+      return '';
+    }
+    if (/^https?:\/\//i.test(path)) {
+      return path;
+    }
+    const normalizedBase = apiBaseUrl.replace(/\/+$/, '');
+    const normalizedPath = path.replace(/^\/+/, '');
+    return `${normalizedBase}/${normalizedPath}`;
+  };
+
+  const determineTopN = (angles: ViewAngle[]) => {
+    if (!angles || angles.length === 0) {
+      return 3;
+    }
+    return Math.max(angles.length, 3);
+  };
 
   const handleFilesSelected = async (files: File[]) => {
     console.log('UploadPage: 选择的文件:', files);
@@ -44,6 +68,7 @@ const UploadPage: React.FC = () => {
     setSelectedImageId(null);
     setSelectedAngles([]);
     setUploadedImageId(null);
+    setCroppingMessage('');
     clearFiles();
   }, []);
 
@@ -65,6 +90,8 @@ const UploadPage: React.FC = () => {
     setCurrentStep('generating');
     setGenerationProgress(0);
     setError('');
+    setGeneratedImages([]);
+    setCroppingMessage('');
 
     try {
       // 使用 SSE 流式接口获取实时进度
@@ -95,36 +122,98 @@ const UploadPage: React.FC = () => {
       
       // 等待一下让用户看到100%进度
       setTimeout(async () => {
-        // 获取生成结果
-        const taskResponse = await generationService.getGenerationTask(imageId);
-        const imagesWithResults = await Promise.all(
-          taskResponse.generated_images.map(async (image: GeneratedImageInfo) => {
-            try {
-              // 尝试获取评分结果
-              const result = await resultService.getResultByGeneratedId(image.id);
-              return { ...image, result };
-            } catch (error) {
-              // 如果评分结果不存在，返回原始图片信息
-              console.warn(`No result found for generated image ${image.id}:`, error);
-              return image;
-            }
-          })
-        );
-        
-        // 按照评分从高到低排序
-        const sortedImages = imagesWithResults.sort((a, b) => {
-          const scoreA = a.result?.overall_score || 0;
-          const scoreB = b.result?.overall_score || 0;
-          return scoreB - scoreA; // 从高到低排序
-        });
-        
-        setGeneratedImages(sortedImages);
-        setCurrentStep('result');
+        try {
+          const taskResponse = await generationService.getGenerationTask(imageId);
+          if (!taskResponse.generated_images || taskResponse.generated_images.length === 0) {
+            throw new Error('未获取到生成的图片，请重试');
+          }
+          await handleCropAndFetchResults(imageId, angles);
+        } catch (postProcessError) {
+          console.error('处理生成结果失败:', postProcessError);
+          setError('生成结果处理失败: ' + (postProcessError instanceof Error ? postProcessError.message : '未知错误'));
+          setCurrentStep('upload');
+        }
       }, 1000);
       
     } catch (err) {
       setError('生成失败: ' + (err instanceof Error ? err.message : '未知错误'));
       setCurrentStep('upload');
+    }
+  };
+
+  const handleCropAndFetchResults = async (imageId: number, angles: ViewAngle[]) => {
+    try {
+      setCurrentStep('crop');
+      setCroppingMessage('正在裁剪生成的图片...');
+
+      const topN = determineTopN(angles);
+      await cropService.createCropTask({
+        original_image_id: imageId,
+        top_n: topN,
+        use_generated_images: true,
+      });
+
+      setCroppingMessage('裁剪完成，正在加载评分与建议...');
+
+      const resultList = await resultService.getResultsByOriginalId(imageId);
+      const resultItems: ResultListItem[] = resultList?.results || [];
+
+      if (!resultItems.length) {
+        throw new Error('未获取到裁剪结果');
+      }
+
+      const detailedResults = await Promise.all(
+        resultItems.map(async (item: ResultListItem) => {
+          try {
+            const info = await resultService.getResultByGeneratedId(item.generated_image_id);
+            const display: GeneratedImageInfo = {
+              id: info.generated_image_id,
+              filename: info.filename,
+              file_path: info.file_path,
+              created_at: info.created_at,
+              result: info,
+            };
+            return display;
+          } catch (detailError) {
+            console.warn(`获取评分详情失败，使用摘要信息，generated_image_id=${item.generated_image_id}`, detailError);
+            const fallbackResult: ResultInfo = {
+              generated_image_id: item.generated_image_id,
+              result_image_id: item.result_image_id,
+              filename: item.filename,
+              file_path: item.file_path,
+              overall_score: item.overall_score,
+              highlights: item.highlights ?? null,
+              ai_comment: null,
+              shooting_guidance: null,
+              created_at: item.created_at,
+            };
+
+            const fallbackDisplay: GeneratedImageInfo = {
+              id: item.generated_image_id,
+              filename: item.filename,
+              file_path: item.file_path,
+              created_at: item.created_at,
+              result: fallbackResult,
+            };
+            return fallbackDisplay;
+          }
+        })
+      );
+
+      const sortedImages = detailedResults.sort((a, b) => {
+        const scoreA = a.result?.overall_score ?? 0;
+        const scoreB = b.result?.overall_score ?? 0;
+        return scoreB - scoreA;
+      });
+
+      setGeneratedImages(sortedImages);
+      setCurrentStep('result');
+    } catch (cropError) {
+      console.error('裁剪流程失败:', cropError);
+      setError('裁剪失败: ' + (cropError instanceof Error ? cropError.message : '未知错误'));
+      setCurrentStep('upload');
+    } finally {
+      setCroppingMessage('');
     }
   };
 
@@ -150,6 +239,7 @@ const UploadPage: React.FC = () => {
     setSelectedImageId(null);
     setSelectedAngles([]);
     setUploadedImageId(null);
+    setCroppingMessage('');
     clearFiles(); // 清理上传的文件列表
   };
 
@@ -264,6 +354,31 @@ const UploadPage: React.FC = () => {
           </div>
         )}
 
+        {currentStep === 'crop' && (
+          <div className="generation-progress">
+            <h2>✂️ 正在裁剪优化</h2>
+            <p className="generation-description">
+              正在对生成方案进行自动裁剪与分析，请稍候...
+            </p>
+            {croppingMessage && (
+              <div className="crop-status">
+                <p>{croppingMessage}</p>
+              </div>
+            )}
+            <div className="progress-container">
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{ width: '100%' }}
+                ></div>
+              </div>
+              <div className="progress-text">
+                处理中...
+              </div>
+            </div>
+          </div>
+        )}
+
         {currentStep === 'result' && (
           <div className="generation-result">
             <div className="result-header">
@@ -287,15 +402,30 @@ const UploadPage: React.FC = () => {
                       className="image-container clickable"
                       onClick={() => openImageModal(image.id)}
                     >
-                      <img 
-                        src={`http://localhost:8000/static/user${user?.id || 1}/results/${image.filename}`}
-                        alt={`生成图片 ${index + 1}`}
-                        onError={(e) => {
-                          // 如果生成图片不存在，显示原始图片
-                          const target = e.target as HTMLImageElement;
-                          target.src = `http://localhost:8000/static/user${user?.id || 1}/original/${uploadedFiles[0]?.file.name}`;
-                        }}
-                      />
+                      {(() => {
+                        const primaryPath = image.result?.file_path || image.file_path || (image.filename
+                          ? `static/user${user?.id || 1}/temp/${image.filename}`
+                          : '');
+                        const imageSrc = buildStaticUrl(primaryPath);
+                        const fallbackPath = uploadedFiles[0]?.file?.name
+                          ? `static/user${user?.id || 1}/original/${uploadedFiles[0]?.file.name}`
+                          : '';
+                        const fallbackSrc = buildStaticUrl(fallbackPath);
+                        const resolvedSrc = imageSrc || fallbackSrc;
+                        return (
+                          <img
+                            src={resolvedSrc}
+                            alt={`生成图片 ${index + 1}`}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              if (fallbackSrc && target.src !== fallbackSrc) {
+                                target.onerror = null;
+                                target.src = fallbackSrc;
+                              }
+                            }}
+                          />
+                        );
+                      })()}
                       {image.result && (
                         <div className="score-badge">
                           <span className="score-value">{image.result.overall_score}</span>
@@ -366,14 +496,30 @@ const UploadPage: React.FC = () => {
                     </div>
                     <div className="modal-body">
                       <div className="modal-image">
-                        <img 
-                          src={`http://localhost:8000/static/user${user?.id || 1}/results/${selectedImage.filename}`}
-                          alt="生成图片"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = `http://localhost:8000/static/user${user?.id || 1}/original/${uploadedFiles[0]?.file.name}`;
-                          }}
-                        />
+                        {(() => {
+                          const primaryPath = selectedImage.result?.file_path || selectedImage.file_path || (selectedImage.filename
+                            ? `static/user${user?.id || 1}/temp/${selectedImage.filename}`
+                            : '');
+                          const imageSrc = buildStaticUrl(primaryPath);
+                          const fallbackPath = uploadedFiles[0]?.file?.name
+                            ? `static/user${user?.id || 1}/original/${uploadedFiles[0]?.file.name}`
+                            : '';
+                          const fallbackSrc = buildStaticUrl(fallbackPath);
+                          const resolvedSrc = imageSrc || fallbackSrc;
+                          return (
+                            <img
+                              src={resolvedSrc}
+                              alt="生成图片"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                if (fallbackSrc && target.src !== fallbackSrc) {
+                                  target.onerror = null;
+                                  target.src = fallbackSrc;
+                                }
+                              }}
+                            />
+                          );
+                        })()}
                       </div>
                       {selectedImage.result && (
                         <div className="modal-details">

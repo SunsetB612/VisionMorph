@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from app.modules.crop.api import router as crop_router
 from app.modules.upload.api import router as upload_router
 from app.modules.generate.api import router as generate_router
 from app.modules.score.api import router as score_router
@@ -32,6 +33,7 @@ if os.path.exists("static"):
 # 注册API路由
 app.include_router(user_router, prefix="/api/auth", tags=["auth"])
 app.include_router(upload_router, prefix="/api", tags=["upload"])
+app.include_router(crop_router, prefix="/api", tags=["crop"])
 app.include_router(generate_router, prefix="/api", tags=["generate"])
 app.include_router(score_router, prefix="/api", tags=["score"])
 app.include_router(result_router, prefix="/api", tags=["result"])

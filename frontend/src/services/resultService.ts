@@ -2,32 +2,33 @@ import apiRequest from './api';
 
 export interface ResultInfo {
   generated_image_id: number;
+  result_image_id: number;
   filename: string;
   file_path: string;
   overall_score: number;
-  highlights: string;
-  ai_comment: string;
-  shooting_guidance: string;
+  highlights?: string | null;
+  ai_comment?: string | null;
+  shooting_guidance?: string | null;
   created_at: string;
 }
 
-export interface GeneratedImageWithResult {
-  id: number;
+export interface ResultListItem {
+  generated_image_id: number;
+  result_image_id: number;
   filename: string;
+  file_path: string;
+  overall_score: number;
+  highlights?: string | null;
   created_at: string;
-  result?: ResultInfo;
 }
 
 export interface OriginalImageResults {
   original_image_id: number;
-  original_filename: string;
-  generated_images: GeneratedImageWithResult[];
+  total_count: number;
+  results: ResultListItem[];
 }
 
-export interface UserResults {
-  user_id: number;
-  results: OriginalImageResults[];
-}
+export type UserResults = OriginalImageResults[];
 
 export interface ResultStatistics {
   total_results: number;

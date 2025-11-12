@@ -25,17 +25,19 @@ def get_results_by_original_image(db: Session, original_image_id: int) -> Result
         
         # 获取所有生成图片及其评分，按评分从高到低排序
         results = db.execute(text("""
-            SELECT 
-                gi.id as generated_image_id,
-                gi.filename,
-                gi.file_path,
+            SELECT
+                ti.id AS generated_image_id,
+                ri.id AS result_image_id,
+                ri.filename,
+                ri.file_path,
                 COALESCE(ie.overall_score, 0) as overall_score,
                 ie.highlights,
-                gi.created_at
-            FROM generated_images gi
-            LEFT JOIN image_evaluations ie ON gi.id = ie.generated_image_id
-            WHERE gi.original_image_id = :original_image_id
-            ORDER BY COALESCE(ie.overall_score, 0) DESC, gi.created_at DESC
+                ri.created_at
+            FROM temp_images ti
+            JOIN result_images ri ON ri.temp_image_id = ti.id
+            LEFT JOIN image_evaluations ie ON ti.id = ie.generated_image_id
+            WHERE ti.original_image_id = :original_image_id
+            ORDER BY COALESCE(ie.overall_score, 0) DESC, ri.created_at DESC
         """), {"original_image_id": original_image_id}).fetchall()
         
         if not results:
@@ -46,11 +48,12 @@ def get_results_by_original_image(db: Session, original_image_id: int) -> Result
         for row in results:
             result_list.append(ResultImageInfo(
                 generated_image_id=row[0],
-                filename=row[1],
-                file_path=row[2],
-                overall_score=row[3],
-                highlights=row[4],
-                created_at=row[5]
+                result_image_id=row[1],
+                filename=row[2],
+                file_path=row[3],
+                overall_score=row[4],
+                highlights=row[5],
+                created_at=row[6]
             ))
         
         return ResultListResponse(
@@ -69,18 +72,20 @@ def get_result_detail(db: Session, generated_image_id: int) -> ResultDetailRespo
     try:
         # 获取生成图片的详细信息
         result = db.execute(text("""
-            SELECT 
-                gi.id as generated_image_id,
-                gi.filename,
-                gi.file_path,
-                COALESCE(ie.overall_score, 0) as overall_score,
+            SELECT
+                ti.id AS generated_image_id,
+                ri.id AS result_image_id,
+                ri.filename,
+                ri.file_path,
+                COALESCE(ie.overall_score, 0) AS overall_score,
                 ie.highlights,
                 ie.ai_comment,
                 ie.shooting_guidance,
-                gi.created_at
-            FROM generated_images gi
-            LEFT JOIN image_evaluations ie ON gi.id = ie.generated_image_id
-            WHERE gi.id = :generated_image_id
+                ri.created_at
+            FROM temp_images ti
+            JOIN result_images ri ON ri.temp_image_id = ti.id
+            LEFT JOIN image_evaluations ie ON ti.id = ie.generated_image_id
+            WHERE ti.id = :generated_image_id
         """), {"generated_image_id": generated_image_id}).fetchone()
         
         if not result:
@@ -89,13 +94,14 @@ def get_result_detail(db: Session, generated_image_id: int) -> ResultDetailRespo
         # 构建详细信息
         detail_info = ResultDetailInfo(
             generated_image_id=result[0],
-            filename=result[1],
-            file_path=result[2],
-            overall_score=result[3],
-            highlights=result[4],
-            ai_comment=result[5],
-            shooting_guidance=result[6],
-            created_at=result[7]
+            result_image_id=result[1],
+            filename=result[2],
+            file_path=result[3],
+            overall_score=result[4],
+            highlights=result[5],
+            ai_comment=result[6],
+            shooting_guidance=result[7],
+            created_at=result[8]
         )
         
         return ResultDetailResponse(result=detail_info)

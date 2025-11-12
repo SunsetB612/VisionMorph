@@ -28,7 +28,8 @@ class UploadService:
             "avatar_dir": os.path.join(user_dir, "avatar"),
             "original_dir": os.path.join(user_dir, "original"),
             "temp_dir": os.path.join(user_dir, "temp"),
-            "results_dir": os.path.join(user_dir, "results")
+            "results_dir": os.path.join(user_dir, "results"),
+            "excel_dir": os.path.join(user_dir, "excel"),
         }
     
     @staticmethod

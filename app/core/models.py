@@ -50,3 +50,12 @@ class ImageEvaluation:
     ai_comment: Optional[str] = None
     shooting_guidance: Optional[str] = None
     created_at: Optional[datetime] = None
+
+@dataclass
+class CroppedImage:
+    """裁剪结果模型（对应 result_images 表，仅保存最终展示图）"""
+    id: Optional[int] = None
+    temp_image_id: int = 0
+    filename: str = ""
+    file_path: str = ""
+    created_at: Optional[datetime] = None

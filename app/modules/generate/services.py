@@ -45,10 +45,10 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
         # 创建用户目录结构
         from app.modules.upload.services import UploadService
         dirs = UploadService.create_user_directories(user_id)
-        results_dir = dirs["results_dir"]
+        temp_dir = dirs["temp_dir"]
         
         # 创建prompts目录
-        user_base_dir = os.path.dirname(results_dir)  # static/userX/
+        user_base_dir = dirs["user_dir"]  # static/userX/
         prompts_dir = os.path.join(user_base_dir, "prompts")
         os.makedirs(prompts_dir, exist_ok=True)
         
@@ -80,7 +80,7 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
         
         try:
             # 调用 pi.py 的图片生成函数
-            # 注意：该函数会读取刚才保存的 prompt 文件，生成图片到 static/user{id}/results/ 目录
+            # 注意：该函数会读取刚才保存的 prompt 文件，生成图片到 static/user{id}/temp/ 目录
             qwen_generate_images_from_prompts(user_id=user_id)
             
             print(f"✅ 图片生成完成")
@@ -95,7 +95,7 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
         prompt_files = sorted([f for f in os.listdir(prompts_dir) if f.startswith(f"user{user_id}_") and f.endswith('.txt')])
         
         # 获取刚才生成的图片文件列表
-        generated_image_files = sorted([f for f in os.listdir(results_dir) if f.startswith(f"user{user_id}_") and f.endswith('.jpg')])
+        generated_image_files = sorted([f for f in os.listdir(temp_dir) if f.startswith(f"user{user_id}_") and f.endswith('.jpg')])
         
         generated_count = 0
         
@@ -103,13 +103,13 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
         for img_file in generated_image_files:
             try:
                 # 提取时间戳，用于匹配对应的 prompt 文件
-                # 图片命名格式：user{id}_img_{序号}_{timestamp}_generated_{i}.jpg
+                # 图片命名格式：user{id}_img_{序号}_{timestamp}_temp_{i}.jpg
                 # Prompt命名格式：user{id}_img_{序号}_{timestamp}_prompt_{i}.txt
                 
-                img_file_path = os.path.join(results_dir, img_file)
+                img_file_path = os.path.join(temp_dir, img_file)
                 
                 # 查找对应的 prompt 文件（通过时间戳匹配）
-                img_parts = img_file.replace('_generated_', '_SPLIT_').split('_SPLIT_')
+                img_parts = img_file.replace('_temp_', '_SPLIT_').split('_SPLIT_')
                 if len(img_parts) >= 2:
                     prompt_prefix = img_parts[0]  # user{id}_img_{序号}_{timestamp}
                     prompt_suffix = img_parts[1].replace('.jpg', '.txt')  # {i}.txt
@@ -127,7 +127,7 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
                 
                 # 保存到数据库
                 db.execute(text("""
-                    INSERT INTO generated_images (original_image_id, filename, file_path, view_angles, prompt_file_path, created_at)
+                    INSERT INTO temp_images (original_image_id, filename, file_path, view_angles, prompt_file_path, created_at)
                     VALUES (:original_image_id, :filename, :file_path, :view_angles, :prompt_file_path, NOW())
                 """), {
                     "original_image_id": original_image_id,
@@ -213,10 +213,10 @@ def create_generation_with_progress(db: Session, request: GenerationRequest):
         # 创建用户目录结构
         from app.modules.upload.services import UploadService
         dirs = UploadService.create_user_directories(user_id)
-        results_dir = dirs["results_dir"]
+        temp_dir = dirs["temp_dir"]
         
         # 创建prompts目录
-        user_base_dir = os.path.dirname(results_dir)
+        user_base_dir = dirs["user_dir"]
         prompts_dir = os.path.join(user_base_dir, "prompts")
         os.makedirs(prompts_dir, exist_ok=True)
         
@@ -241,16 +241,16 @@ def create_generation_with_progress(db: Session, request: GenerationRequest):
         
         # ========== 步骤4：扫描文件并记录到数据库 ==========
         prompt_files = sorted([f for f in os.listdir(prompts_dir) if f.startswith(f"user{user_id}_") and f.endswith('.txt')])
-        generated_image_files = sorted([f for f in os.listdir(results_dir) if f.startswith(f"user{user_id}_") and f.endswith('.jpg')])
+        generated_image_files = sorted([f for f in os.listdir(temp_dir) if f.startswith(f"user{user_id}_") and f.endswith('.jpg')])
         
         generated_count = 0
         
         for img_file in generated_image_files:
             try:
-                img_file_path = os.path.join(results_dir, img_file)
+                img_file_path = os.path.join(temp_dir, img_file)
                 
                 # 匹配对应的 prompt 文件
-                img_parts = img_file.replace('_generated_', '_SPLIT_').split('_SPLIT_')
+                img_parts = img_file.replace('_temp_', '_SPLIT_').split('_SPLIT_')
                 if len(img_parts) >= 2:
                     prompt_prefix = img_parts[0]
                     prompt_suffix = img_parts[1].replace('.jpg', '.txt')
@@ -264,7 +264,7 @@ def create_generation_with_progress(db: Session, request: GenerationRequest):
                 
                 # 保存到数据库
                 db.execute(text("""
-                    INSERT INTO generated_images (original_image_id, filename, file_path, view_angles, prompt_file_path, created_at)
+                    INSERT INTO temp_images (original_image_id, filename, file_path, view_angles, prompt_file_path, created_at)
                     VALUES (:original_image_id, :filename, :file_path, :view_angles, :prompt_file_path, NOW())
                 """), {
                     "original_image_id": original_image_id,
@@ -313,7 +313,7 @@ def get_generated_images(db: Session, original_image_id: int) -> List[GeneratedI
     """获取生成的图片列表"""
     results = db.execute(text("""
         SELECT id, filename, file_path, view_angles, prompt_file_path, created_at 
-        FROM generated_images 
+        FROM temp_images 
         WHERE original_image_id = :original_image_id
         ORDER BY created_at DESC
     """), {"original_image_id": original_image_id}).fetchall()
