@@ -396,6 +396,47 @@
   border: 1px solid #e5e7eb;
 }
 
+/* 构图亮点：分条 + 小标题强调 */
+.composition-highlights-section .composition-highlights-list {
+  margin: 0;
+  padding: 0.5rem 0.4rem;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.composition-highlight-item {
+  padding: 0.6rem 0.65rem 0.65rem 0.75rem;
+  border-left: 3px solid #0ea5e9;
+  border-radius: 0 8px 8px 0;
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.08) 0%, rgba(255, 255, 255, 0.4) 55%);
+}
+
+.composition-highlight-title {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #0369a1;
+  line-height: 1.35;
+  padding: 0.22rem 0.55rem;
+  margin-bottom: 0.4rem;
+  border-radius: 6px;
+  background: linear-gradient(145deg, #e0f2fe 0%, #f0f9ff 100%);
+  border: 1px solid #7dd3fc;
+  box-shadow: 0 1px 2px rgba(14, 165, 233, 0.12);
+}
+
+.composition-highlight-body {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #4b5563;
+}
+
 /* 可点击图片容器 */
 .image-container.clickable {
   cursor: pointer;

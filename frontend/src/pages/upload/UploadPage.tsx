@@ -28,6 +28,69 @@ const extractDemoInputKey = (filename?: string): string | null => {
   return candidate && SUPPORTED_DEMO_INPUTS.has(candidate) ? candidate : null;
 };
 
+/** 构图亮点：按换行分条；若整格仅一行且含中文分号，再按「；」拆分 */
+const splitCompositionHighlightLines = (raw: string): string[] => {
+  const normalized = raw.replace(/\r\n/g, '\n').trim();
+  if (!normalized) return [];
+  let parts = normalized
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (parts.length === 1 && parts[0].includes('；')) {
+    parts = parts[0]
+      .split('；')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  return parts;
+};
+
+/** 「小标题：正文」优先识别全角冒号，否则半角（仅首次冒号处拆分） */
+const parseCompositionHighlightLine = (
+  line: string
+): { title: string | null; body: string } => {
+  const fw = line.indexOf('：');
+  const hw = line.indexOf(':');
+  let at = fw >= 0 ? fw : -1;
+  let sepLen = 1;
+  if (fw >= 0 && hw >= 0) {
+    at = Math.min(fw, hw);
+  } else if (fw < 0 && hw >= 0) {
+    at = hw;
+  }
+  if (at > 0 && at < line.length - 1) {
+    const title = line.slice(0, at).trim();
+    const body = line.slice(at + sepLen).trim();
+    if (title && body) {
+      return { title, body };
+    }
+  }
+  return { title: null, body: line };
+};
+
+const CompositionHighlightsBlock: React.FC<{ text: string }> = ({ text }) => {
+  const lines = splitCompositionHighlightLines(text);
+  return (
+    <div className="composition-highlights-list">
+      {lines.map((line, i) => {
+        const { title, body } = parseCompositionHighlightLine(line);
+        return (
+          <div key={i} className="composition-highlight-item">
+            {title ? (
+              <>
+                <span className="composition-highlight-title">{title}</span>
+                <p className="composition-highlight-body">{body}</p>
+              </>
+            ) : (
+              <p className="composition-highlight-body">{body}</p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const UploadPage: React.FC = () => {
   const { uploadedFiles, isUploading, uploadMultipleFiles, clearFiles } = useUpload();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('upload');
@@ -411,9 +474,9 @@ const UploadPage: React.FC = () => {
                           </div>
                         )}
                         {selectedImage.composition_highlights && (
-                          <div className="guidance-section">
+                          <div className="guidance-section composition-highlights-section">
                             <h4>构图亮点</h4>
-                            <p className="guidance-text">{selectedImage.composition_highlights}</p>
+                            <CompositionHighlightsBlock text={selectedImage.composition_highlights} />
                           </div>
                         )}
                         {selectedImage.operation_guide && (
