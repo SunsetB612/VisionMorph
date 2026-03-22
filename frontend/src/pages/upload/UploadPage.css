@@ -1,7 +1,8 @@
 /* UploadPage.css */
 .upload-page {
   padding: 2rem;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   min-height: 100vh;
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
   margin: 0;
@@ -659,17 +660,44 @@
   .upload-page {
     padding: 1rem;
   }
-  
+
   .upload-container {
-    padding: 1.5rem;
+    padding: 1.25rem;
   }
-  
+
+  .upload-container h2 {
+    font-size: 1.5rem;
+  }
+
+  .result-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    text-align: left;
+  }
+
+  .result-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .result-title h2 {
+    font-size: 1.25rem;
+  }
+
+  .reset-btn {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    font-size: 0.9rem;
+  }
+
   .file-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .file-status {
     align-items: flex-start;
   }
@@ -682,14 +710,6 @@
   .image-grid {
     grid-template-columns: 1fr;
     gap: 1.5rem;
-  }
-  
-  .upload-page {
-    padding: 1rem;
-  }
-  
-  .upload-container {
-    padding: 1.5rem;
   }
 }
 
