@@ -13,6 +13,13 @@ def create_generation(db: Session, request: GenerationRequest) -> GenerationResp
     """创建生成任务"""
     
     try:
+        # 处理视角参数
+        view_angles = request.view_angles if request.view_angles else []
+        if view_angles:
+            print(f"用户选择的视角方向: {', '.join(view_angles)}")
+        else:
+            print("用户未选择视角方向，将使用默认设置")
+        
         # 获取原始图片信息和用户ID
         result = db.execute(text("""
             SELECT i.id, i.filename, i.file_path, i.user_id, u.username 

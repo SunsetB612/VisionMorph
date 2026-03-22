@@ -35,6 +35,35 @@ class ResultDetailResponse(BaseModel):
     """结果详情响应"""
     result: ResultDetailInfo
 
+class StaticImageResult(BaseModel):
+    """固定输出目录中的图片结果"""
+    id: str
+    group: str
+    image_name: str
+    filename: str
+    relative_path: str
+    overall_score: float
+    shooting_guidance: Optional[str] = None
+    viewpoint_feature: Optional[str] = Field(
+        default=None,
+        description="一句话概括优势特征（Excel 列）",
+    )
+    composition_highlights: Optional[str] = Field(
+        default=None,
+        description="推荐视角优点（Excel 列）",
+    )
+    operation_guide: Optional[str] = Field(
+        default=None,
+        description="操作指南（Excel 列）",
+    )
+    orientation: Optional[str] = None
+    crop_type: Optional[str] = None
+
+class StaticResultResponse(BaseModel):
+    """固定输出目录结果列表"""
+    total_count: int
+    results: List[StaticImageResult]
+
 class ResultRequest(BaseModel):
     """结果请求"""
     original_image_id: int = Field(..., description="原始图片ID")

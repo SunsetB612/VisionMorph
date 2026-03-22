@@ -3,6 +3,7 @@ const API_BASE_URL = '/api';
 
 export interface GenerationRequest {
   original_image_id: number;
+  view_angles?: string[];
 }
 
 export interface GenerationResponse {

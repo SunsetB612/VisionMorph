@@ -31,6 +31,22 @@
 
 ## 快速开始
 
+### 数据库初始化
+
+在启动后端服务之前，需要先初始化数据库：
+
+```bash
+# 确保 MySQL 服务已启动，并创建数据库（如果不存在）
+# CREATE DATABASE visionmorph CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+# 运行数据库初始化脚本
+python -m app.core.database
+```
+
+**配置数据库连接**（可选）：
+- 创建 `.env` 文件配置数据库连接信息，或直接修改 `app/core/config.py` 中的默认值
+- 默认配置：`localhost:3306`，用户名 `root`，密码为空，数据库名 `visionmorph`
+
 ### 后端启动
 ```bash
 pip install -r requirements.txt

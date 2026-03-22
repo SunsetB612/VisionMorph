@@ -3,10 +3,12 @@
 """
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional, List
 
 class GenerationRequest(BaseModel):
     """生成请求"""
     original_image_id: int
+    view_angles: Optional[List[str]] = None  # 视角大方向列表，可选
 
 class GenerationResponse(BaseModel):
     """生成响应"""

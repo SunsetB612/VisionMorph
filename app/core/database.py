@@ -34,6 +34,32 @@ def get_db():
     finally:
         session.close()
 
+def create_database_if_not_exists():
+    """如果数据库不存在则创建"""
+    try:
+        # 连接到 MySQL 服务器（不指定数据库）
+        server_url = f"mysql+pymysql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/?charset=utf8mb4"
+        server_engine = create_engine(server_url, echo=False, isolation_level="AUTOCOMMIT")
+        
+        with server_engine.connect() as conn:
+            # 检查数据库是否存在
+            result = conn.execute(text(
+                f"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{settings.DB_NAME}'"
+            )).fetchone()
+            
+            if result is None:
+                # 数据库不存在，创建它
+                conn.execute(text(f"CREATE DATABASE {settings.DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                print(f"✅ 创建数据库: {settings.DB_NAME}")
+            else:
+                print(f"ℹ️ 数据库已存在: {settings.DB_NAME}")
+        
+        server_engine.dispose()
+        
+    except SQLAlchemyError as e:
+        print(f"❌ 创建数据库失败: {e}")
+        raise
+
 def init_database():
     """初始化数据库，创建所有表"""
     try:
@@ -160,7 +186,10 @@ def setup_database():
     # 创建存储目录
     create_storage_directories()
     
-    # 初始化数据库
+    # 确保数据库存在
+    create_database_if_not_exists()
+    
+    # 初始化数据库（创建表）
     init_database()
     
     print("🎉 数据库设置完成！")

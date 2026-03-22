@@ -35,6 +35,29 @@ export interface ResultStatistics {
   score_distribution: Record<string, number>;
 }
 
+export interface StaticImageResult {
+  id: string;
+  group: string;
+  image_name: string;
+  filename: string;
+  relative_path: string;
+  overall_score: number;
+  shooting_guidance?: string;
+  /** Excel：一句话概括优势特征 */
+  viewpoint_feature?: string;
+  /** Excel：推荐视角优点 */
+  composition_highlights?: string;
+  /** Excel：操作指南 */
+  operation_guide?: string;
+  orientation?: string;
+  crop_type?: string;
+}
+
+export interface StaticResultResponse {
+  total_count: number;
+  results: StaticImageResult[];
+}
+
 class ResultService {
   /**
    * 获取生成图片的评分结果
@@ -66,6 +89,15 @@ class ResultService {
    */
   async getResultStatistics(): Promise<ResultStatistics> {
     const response = await apiRequest('/api/result/statistics');
+    return response;
+  }
+
+  /**
+   * 获取固定输出目录中的图片结果
+   */
+  async getStaticResults(inputKey?: string): Promise<StaticResultResponse> {
+    const query = inputKey ? `?input_key=${encodeURIComponent(inputKey)}` : '';
+    const response = await apiRequest(`/api/result/static${query}`);
     return response;
   }
 }

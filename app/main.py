@@ -29,6 +29,10 @@ app.add_middleware(
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# 预设输出图片目录
+if os.path.exists("output"):
+    app.mount("/output", StaticFiles(directory="output"), name="output")
+
 # 注册API路由
 app.include_router(user_router, prefix="/api/auth", tags=["auth"])
 app.include_router(upload_router, prefix="/api", tags=["upload"])

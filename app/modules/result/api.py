@@ -1,6 +1,8 @@
 """
 结果展示API路由
 """
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -9,12 +11,14 @@ from app.core.models import User
 from app.modules.result.schemas import (
     ResultListResponse, 
     ResultDetailResponse, 
-    ResultRequest
+    ResultRequest,
+    StaticResultResponse
 )
 from app.modules.result.services import (
     get_results_by_original_image,
     get_result_detail,
-    get_user_results
+    get_user_results,
+    get_static_output_results
 )
 
 router = APIRouter(prefix="/result", tags=["result"])
@@ -52,6 +56,21 @@ async def get_result_detail_api(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
+
+@router.get("/static", response_model=StaticResultResponse)
+async def get_static_results_api(
+    input_key: Optional[str] = Query(
+        default=None,
+        description="输入示例编号，例如 '1'、'2' 或 '3'"
+    )
+):
+    """
+    获取固定输出目录中的所有图片结果，按评分排序
+    """
+    try:
+        return get_static_output_results(input_key)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"无法获取固定结果: {str(e)}")
 
 @router.get("/user/{user_id}", response_model=list[ResultListResponse])
 async def get_user_results(
