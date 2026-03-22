@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import UploadComponent from '../../components/upload/UploadComponent';
 import { useUpload } from '../../hooks/useUpload';
 import { generationService } from '../../services/generationService';
@@ -28,8 +28,8 @@ const extractDemoInputKey = (filename?: string): string | null => {
   return candidate && SUPPORTED_DEMO_INPUTS.has(candidate) ? candidate : null;
 };
 
-/** 构图亮点：按换行分条；若整格仅一行且含中文分号，再按「；」拆分 */
-const splitCompositionHighlightLines = (raw: string): string[] => {
+/** 多行文本拆条：换行优先；若整段仅一行且含「；」则再拆分（构图亮点 / 操作指南共用） */
+const splitIntoDisplayLines = (raw: string): string[] => {
   const normalized = raw.replace(/\r\n/g, '\n').trim();
   if (!normalized) return [];
   let parts = normalized
@@ -68,8 +68,37 @@ const parseCompositionHighlightLine = (
   return { title: null, body: line };
 };
 
+/**
+ * 操作指南单行：优先「小标题：正文」冒号；否则「首句 + 句末标点」为小标题，后面为正文
+ * 例：「定位水边拍摄点。移动到距离…」→ 小标题「定位水边拍摄点」，正文「移动到距离…」
+ */
+const parseOperationGuideLine = (normalized: string): { title: string | null; body: string } => {
+  const colon = parseCompositionHighlightLine(normalized);
+  if (colon.title) {
+    return colon;
+  }
+  const s = normalized.trim();
+  if (!s) {
+    return { title: null, body: '' };
+  }
+  const m = s.match(/^(.+?[。！？．])([\s\S]*)$/);
+  if (!m) {
+    return { title: null, body: s };
+  }
+  const first = m[1].trim();
+  const rest = m[2].trim();
+  if (!rest) {
+    return { title: null, body: s };
+  }
+  const title = first.replace(/[。！？．]+$/u, '').trim();
+  if (!title) {
+    return { title: null, body: s };
+  }
+  return { title, body: rest };
+};
+
 const CompositionHighlightsBlock: React.FC<{ text: string }> = ({ text }) => {
-  const lines = splitCompositionHighlightLines(text);
+  const lines = splitIntoDisplayLines(text);
   return (
     <div className="composition-highlights-list">
       {lines.map((line, i) => {
@@ -85,6 +114,139 @@ const CompositionHighlightsBlock: React.FC<{ text: string }> = ({ text }) => {
               <p className="composition-highlight-body">{body}</p>
             )}
           </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/** 行首可选：emoji 簇 + 空白（Excel 里常在「第N步」前加图标） */
+const RE_LEADING_EMOJI_SPACES =
+  /^(?:(?:\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s*)+/u;
+
+/** 去掉行首「第N步：」等与左侧序号重复的标记（支持 emoji 在「第」之前） */
+const normalizeOperationStepText = (line: string, stepIndex: number): string => {
+  let s = line.trim();
+  const n = stepIndex + 1;
+  const mNum = s.match(/^(\d+)[\.、\)\）]\s*(.*)$/s);
+  if (mNum && parseInt(mNum[1], 10) === n) {
+    s = mNum[2].trim();
+  }
+  const stripCnStep = (t: string): string => {
+    let u = t;
+    for (let k = 0; k < 6; k++) {
+      const before = u;
+      u = u
+        .replace(
+          new RegExp(
+            `${RE_LEADING_EMOJI_SPACES.source}第[一二三四五六七八九十百千万两零\\d]+步\\s*[：:、,.，．]\\s*`,
+            'u'
+          ),
+          ''
+        )
+        .replace(
+          new RegExp(
+            `${RE_LEADING_EMOJI_SPACES.source}第[一二三四五六七八九十百千万两零\\d]+步\\s+`,
+            'u'
+          ),
+          ''
+        )
+        .replace(/^第[一二三四五六七八九十百千万两零\d]+步\s*[：:、,.，．]\s*/, '')
+        .replace(/^第[一二三四五六七八九十百千万两零\d]+步\s+/, '')
+        .replace(
+          new RegExp(
+            `${RE_LEADING_EMOJI_SPACES.source}步骤\\s*[一二三四五六七八九十百千万两零\\d]+\\s*[：:、,.，．]\\s*`,
+            'u'
+          ),
+          ''
+        )
+        .replace(/^步骤\s*[一二三四五六七八九十百千万两零\d]+\s*[：:、,.，．]\s*/, '')
+        .replace(
+          new RegExp(
+            `${RE_LEADING_EMOJI_SPACES.source}步骤\\s*\\d+\\s*[：:、,.，．]\\s*`,
+            'u'
+          ),
+          ''
+        )
+        .replace(/^步骤\s*\d+\s*[：:、,.，．]\s*/, '')
+        .replace(
+          new RegExp(`${RE_LEADING_EMOJI_SPACES.source}[Ss]tep\\s*\\d+\\s*[：:.]\\s*`, 'u'),
+          ''
+        )
+        .replace(/^[Ss]tep\s*\d+\s*[：:.]\s*/, '');
+      if (u === before) break;
+    }
+    return u.trim();
+  };
+  return stripCnStep(s);
+};
+
+/** 竖线 + 底部三角箭头（一体 SVG，无圆钮） */
+const OperationGuideConnector: React.FC<{ stepIndex: number }> = ({ stepIndex }) => {
+  const uid = useId().replace(/:/g, '');
+  const gradId = `opg-${uid}-grad-${stepIndex}`;
+  return (
+    <div className="operation-guide-connector" aria-hidden="true">
+      <svg
+        className="operation-guide-flow-svg"
+        viewBox="0 0 12 36"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <linearGradient id={gradId} x1="6" y1="0" x2="6" y2="36" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#bae6fd" />
+            <stop offset="55%" stopColor="#0ea5e9" />
+            <stop offset="100%" stopColor="#0284c7" />
+          </linearGradient>
+        </defs>
+        <line
+          x1="6"
+          y1="1"
+          x2="6"
+          y2="23"
+          stroke={`url(#${gradId})`}
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <path d="M2 24 L10 24 L6 31 Z" fill={`url(#${gradId})`} />
+      </svg>
+    </div>
+  );
+};
+
+const OperationGuideBlock: React.FC<{ text: string }> = ({ text }) => {
+  const steps = splitIntoDisplayLines(text);
+  return (
+    <div className="operation-guide-list" role="list">
+      {steps.map((line, i) => {
+        const normalized = normalizeOperationStepText(line, i);
+        const { title, body } = parseOperationGuideLine(normalized);
+        return (
+        <div
+          key={i}
+          className={
+            i < steps.length - 1
+              ? 'operation-guide-step operation-guide-step--has-connector'
+              : 'operation-guide-step'
+          }
+          role="listitem"
+        >
+          <div className="operation-guide-marker" aria-hidden="true">
+            <span className="operation-guide-index">{i + 1}</span>
+          </div>
+          <div className="operation-guide-body">
+            {title ? (
+              <>
+                <span className="operation-guide-subtitle">{title}</span>
+                <p className="operation-guide-text">{body}</p>
+              </>
+            ) : (
+              <p className="operation-guide-text">{body}</p>
+            )}
+          </div>
+          {i < steps.length - 1 && <OperationGuideConnector stepIndex={i} />}
+        </div>
         );
       })}
     </div>
@@ -480,9 +642,9 @@ const UploadPage: React.FC = () => {
                           </div>
                         )}
                         {selectedImage.operation_guide && (
-                          <div className="guidance-section">
+                          <div className="guidance-section operation-guide-section">
                             <h4>操作指南</h4>
-                            <p className="guidance-text">{selectedImage.operation_guide}</p>
+                            <OperationGuideBlock text={selectedImage.operation_guide} />
                           </div>
                         )}
                       </div>
