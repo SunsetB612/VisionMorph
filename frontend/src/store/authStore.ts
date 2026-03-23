@@ -3,6 +3,7 @@
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getApiBaseUrl } from '../config/apiBase';
 
 interface User {
   id: number;
@@ -30,7 +31,7 @@ interface AuthState {
   isLoading: boolean;
 }
 
-const API_BASE_URL = 'http://localhost:8000/api/auth';
+const authUrl = (path: string) => `${getApiBaseUrl()}/api/auth${path}`;
 
 interface AuthStore extends AuthState {
   // Actions
@@ -59,7 +60,7 @@ export const useAuthStore = create<AuthStore>()(
       login: async (credentials: LoginRequest) => {
         set({ isLoading: true });
         try {
-          const response = await fetch(`${API_BASE_URL}/login`, {
+          const response = await fetch(authUrl('/login'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -104,7 +105,7 @@ export const useAuthStore = create<AuthStore>()(
       register: async (userData: RegisterRequest) => {
         set({ isLoading: true });
         try {
-          const response = await fetch(`${API_BASE_URL}/register`, {
+          const response = await fetch(authUrl('/register'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -156,7 +157,7 @@ export const useAuthStore = create<AuthStore>()(
 
         set({ isLoading: true });
         try {
-          const response = await fetch(`${API_BASE_URL}/me`, {
+          const response = await fetch(authUrl('/me'), {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -195,7 +196,7 @@ export const useAuthStore = create<AuthStore>()(
 
         set({ isLoading: true });
         try {
-          const response = await fetch(`${API_BASE_URL}/me`, {
+          const response = await fetch(authUrl('/me'), {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`,

@@ -9,16 +9,17 @@ from app.core.database import get_db
 from app.core.security import get_current_active_user
 from app.core.models import User
 from app.modules.result.schemas import (
-    ResultListResponse, 
-    ResultDetailResponse, 
-    ResultRequest,
-    StaticResultResponse
+    ResultListResponse,
+    ResultDetailResponse,
+    StaticResultResponse,
+    ShowcaseEvolutionResponse,
 )
 from app.modules.result.services import (
     get_results_by_original_image,
     get_result_detail,
     get_user_results,
-    get_static_output_results
+    get_static_output_results,
+    get_showcase_evolution,
 )
 
 router = APIRouter(prefix="/result", tags=["result"])
@@ -56,6 +57,17 @@ async def get_result_detail_api(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
+
+@router.get("/static/showcase", response_model=ShowcaseEvolutionResponse)
+async def get_static_showcase_api():
+    """
+    构图进化论：input/1、2、3 与各自 output 目录中评分最高的一张 AI 结果对比数据。
+    """
+    try:
+        return get_showcase_evolution()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"无法获取展示数据: {str(e)}")
+
 
 @router.get("/static", response_model=StaticResultResponse)
 async def get_static_results_api(

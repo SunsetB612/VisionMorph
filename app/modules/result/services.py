@@ -11,17 +11,21 @@ from openpyxl import load_workbook
 
 from app.core.config import settings
 from app.modules.result.schemas import (
-    ResultListResponse, 
-    ResultDetailResponse, 
-    ResultImageInfo, 
+    ResultListResponse,
+    ResultDetailResponse,
+    ResultImageInfo,
     ResultDetailInfo,
     StaticImageResult,
-    StaticResultResponse
+    StaticResultResponse,
+    ShowcaseEvolutionItem,
+    ShowcaseEvolutionResponse,
 )
 
 OUTPUT_BASE_DIR = os.path.join(settings.BASE_DIR, "output")
+INPUT_BASE_DIR = os.path.join(settings.BASE_DIR, "input")
 EXCEL_FILENAME = "构图分析报告.xlsx"
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
+SHOWCASE_INPUT_KEYS = ("1", "2", "3")
 
 
 def _sort_numeric_key(value: str) -> tuple[int, str]:
@@ -161,6 +165,48 @@ def _build_static_results_for_group(input_key: str, group: str) -> List[StaticIm
             )
         )
     return group_results
+
+
+def _resolve_input_original_url(input_key: str) -> Optional[str]:
+    """返回 input 目录下对应编号的首个存在的图片路径（如 /input/1.jpg）。"""
+    if not os.path.isdir(INPUT_BASE_DIR):
+        return None
+    for ext in IMAGE_EXTENSIONS:
+        cand = f"{input_key}{ext}"
+        path = os.path.join(INPUT_BASE_DIR, cand)
+        if os.path.isfile(path):
+            return f"/input/{cand}".replace("\\", "/")
+    return None
+
+
+def _list_static_results_for_input_key_strict(input_key: str) -> List[StaticImageResult]:
+    """仅当 output/{input_key} 存在时汇总该目录下所有分组结果，否则空列表。"""
+    available = _list_available_input_keys()
+    if input_key not in available:
+        return []
+    combined: List[StaticImageResult] = []
+    for group in _list_group_directories(input_key):
+        combined.extend(_build_static_results_for_group(input_key, group))
+    return sorted(combined, key=lambda item: item.overall_score, reverse=True)
+
+
+def get_showcase_evolution() -> ShowcaseEvolutionResponse:
+    """
+    构图进化论：input/1、2、3 原图，对应 output/1、2、3 下评分最高的一张 AI 图。
+    """
+    items: List[ShowcaseEvolutionItem] = []
+    for key in SHOWCASE_INPUT_KEYS:
+        original = _resolve_input_original_url(key)
+        ranked = _list_static_results_for_input_key_strict(key)
+        best = ranked[0] if ranked else None
+        items.append(
+            ShowcaseEvolutionItem(
+                input_key=key,
+                original_relative_path=original,
+                best_result=best,
+            )
+        )
+    return ShowcaseEvolutionResponse(items=items)
 
 
 def get_static_output_results(input_key: Optional[str] = None) -> StaticResultResponse:

@@ -7,6 +7,14 @@ export interface UploadFile {
   progress: number;
   error?: string;
   imageId?: number;
+  /** 服务端与 input/1、2、3 比对后的键，用于拉取预置结果（不展示） */
+  demoInputKey?: string;
+}
+
+/** POST /api/upload 成功 JSON（节选） */
+export interface UploadImageSuccessResponse {
+  image_id: number;
+  demo_input_key?: string;
 }
 
 export interface UploadState {

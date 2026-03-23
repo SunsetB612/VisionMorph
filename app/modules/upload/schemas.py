@@ -16,6 +16,8 @@ class UploadResponse(BaseModel):
     width: Optional[int] = None
     height: Optional[int] = None
     created_at: datetime
+    # 与项目 input/1、2、3 参考图感知哈希比对结果，供前端拉取对应预置 output 数据（不展示给用户）
+    demo_input_key: str = "1"
 
 class UploadErrorResponse(BaseModel):
     """上传错误响应模型"""

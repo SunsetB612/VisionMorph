@@ -1,7 +1,5 @@
 import apiRequest from './api';
-
-// API基础配置
-const API_BASE_URL = 'http://localhost:8000';
+import { getApiBaseUrl } from '../config/apiBase';
 
 export const uploadService = {
   // 上传图片
@@ -16,7 +14,7 @@ export const uploadService = {
     }
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/upload`, {
+      const response = await fetch(`${getApiBaseUrl()}/api/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

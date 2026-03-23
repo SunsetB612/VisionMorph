@@ -20,3 +20,5 @@ clear_database.py
 restore_default_user.py
 
 .idea/
+
+test.html    

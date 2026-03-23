@@ -83,26 +83,28 @@ function AppContent() {
           onClick={() => setNavOpen(false)}
         />
       )}
-      
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route 
-          path="/upload" 
-          element={
-            <ProtectedRoute>
-              <UploadPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/auth" 
-          element={
-            <PublicRoute>
-              <AuthPage />
-            </PublicRoute>
-          } 
-        />
-      </Routes>
+
+      <main className="app-main">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/upload"
+            element={
+              <ProtectedRoute>
+                <UploadPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/auth"
+            element={
+              <PublicRoute>
+                <AuthPage />
+              </PublicRoute>
+            }
+          />
+        </Routes>
+      </main>
     </div>
   );
 }

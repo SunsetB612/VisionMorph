@@ -4,7 +4,9 @@ import hashlib
 import time
 from io import BytesIO
 from fastapi import UploadFile, HTTPException
+import imagehash
 from PIL import Image as PILImage
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.models import Image
 from app.modules.upload.schemas import UploadResponse, UploadErrorResponse, UploadStatusResponse
@@ -13,6 +15,11 @@ from app.modules.upload.schemas import UploadResponse, UploadErrorResponse, Uplo
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 BASE_STATIC_DIR = "static"  # 基础静态文件目录
+
+# 与项目根目录 input/1、2、3 参考图比对（手机重拍/压缩后仍应接近）
+DEMO_INPUT_KEYS = ("1", "2", "3")
+PHASH_MAX_DISTANCE = 14
+
 
 class UploadService:
     """上传服务类"""
@@ -88,6 +95,40 @@ class UploadService:
             # 如果无法获取尺寸，返回默认值
             print(f"⚠️ 无法获取图片尺寸: {e}")
             return (0, 0)
+
+    @staticmethod
+    def match_demo_input_key(content: bytes) -> str:
+        """与项目 input/1、2、3 参考图做感知哈希比对，返回最接近的示例编号。"""
+        try:
+            ref_dir = os.path.join(settings.BASE_DIR, "input")
+            ref_paths: list[tuple[str, str]] = []
+            for k in DEMO_INPUT_KEYS:
+                for ext in (".jpg", ".jpeg", ".png", ".webp"):
+                    p = os.path.join(ref_dir, f"{k}{ext}")
+                    if os.path.isfile(p):
+                        ref_paths.append((k, p))
+                        break
+            if not ref_paths:
+                return "1"
+            upload_img = PILImage.open(BytesIO(content))
+            if upload_img.mode not in ("RGB", "L"):
+                upload_img = upload_img.convert("RGB")
+            h_u = imagehash.phash(upload_img)
+            best_k, best_d = "1", 999
+            for k, path in ref_paths:
+                ref_img = PILImage.open(path)
+                if ref_img.mode not in ("RGB", "L"):
+                    ref_img = ref_img.convert("RGB")
+                h_r = imagehash.phash(ref_img)
+                d = h_u - h_r
+                if d < best_d:
+                    best_d, best_k = d, k
+            if best_d > PHASH_MAX_DISTANCE:
+                return "1"
+            return best_k
+        except Exception as e:
+            print(f"match_demo_input_key: {e}")
+            return "1"
     
     @staticmethod
     def generate_user_filename(user_id: int, original_filename: str) -> tuple[str, str]:
@@ -158,7 +199,8 @@ class UploadService:
             
             # 获取图片尺寸
             width, height = UploadService.get_image_dimensions(content)
-            
+            demo_input_key = UploadService.match_demo_input_key(content)
+
             # 重置文件指针
             await file.seek(0)
             
@@ -210,7 +252,10 @@ class UploadService:
                 filename=filename,
                 file_path=file_path,
                 file_size=len(content),
-                created_at=created_at
+                width=width,
+                height=height,
+                created_at=created_at,
+                demo_input_key=demo_input_key,
             )
             
         except HTTPException:

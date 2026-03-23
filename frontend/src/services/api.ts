@@ -1,9 +1,8 @@
-// API基础配置
-const API_BASE_URL = 'http://localhost:8000';
+import { getApiBaseUrl } from '../config/apiBase';
 
 // 通用API请求函数
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${getApiBaseUrl()}${endpoint}`;
   
   // 获取认证token
   const token = localStorage.getItem('auth_token');

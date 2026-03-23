@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useUploadStore } from '../store/uploadStore';
 import { uploadService } from '../services/uploadService';
-import type { UploadFile } from '../types/upload';
+import type { UploadFile, UploadImageSuccessResponse } from '../types/upload';
 
 export const useUpload = () => {
   const {
@@ -34,14 +34,15 @@ export const useUpload = () => {
     try {
       updateFile(fileId, { status: 'uploading', progress: 0 });
       
-      const response = await uploadService.uploadImage(file);
-      
-      updateFile(fileId, { 
-        status: 'success', 
+      const response = (await uploadService.uploadImage(file)) as UploadImageSuccessResponse;
+
+      updateFile(fileId, {
+        status: 'success',
         progress: 100,
-        imageId: response.image_id
+        imageId: response.image_id,
+        demoInputKey: response.demo_input_key,
       });
-      
+
       return response;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '上传失败';

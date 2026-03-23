@@ -64,6 +64,20 @@ class StaticResultResponse(BaseModel):
     total_count: int
     results: List[StaticImageResult]
 
+
+class ShowcaseEvolutionItem(BaseModel):
+    """首页「构图进化论」单条：原图 + 该示例下评分最高的 AI 图"""
+    input_key: str
+    original_relative_path: Optional[str] = Field(
+        default=None,
+        description="原图 URL 路径，如 /input/1.jpg",
+    )
+    best_result: Optional[StaticImageResult] = None
+
+
+class ShowcaseEvolutionResponse(BaseModel):
+    items: List[ShowcaseEvolutionItem]
+
 class ResultRequest(BaseModel):
     """结果请求"""
     original_image_id: int = Field(..., description="原始图片ID")

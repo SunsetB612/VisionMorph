@@ -5,6 +5,7 @@ import { generationService } from '../../services/generationService';
 import { resultService } from '../../services/resultService';
 import type { UploadFile } from '../../types/upload';
 import type { StaticImageResult } from '../../services/resultService';
+import { getApiBaseUrl } from '../../config/apiBase';
 import './UploadPage.css';
 
 type WorkflowStep = 'upload' | 'generating' | 'result';
@@ -14,7 +15,6 @@ const sortResultsByScore = (results: StaticImageResult[]) =>
   [...results].sort((a, b) => b.overall_score - a.overall_score);
 
 const SUPPORTED_DEMO_INPUTS = new Set(['1', '2', '3']);
-const DEMO_INPUT_HINT = '当前仅支持 input/1.jpg、input/2.jpg、input/3.jpg 示例图片';
 
 const extractDemoInputKey = (filename?: string): string | null => {
   if (!filename) return null;
@@ -262,26 +262,16 @@ const UploadPage: React.FC = () => {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [selectedViewAngles, setSelectedViewAngles] = useState<ViewAngle[]>([]);
   const [showViewAngleModal, setShowViewAngleModal] = useState(false);
-  const [demoInputKey, setDemoInputKey] = useState<string | null>(null);
 
   const handleFilesSelected = async (files: File[]) => {
     try {
       await uploadMultipleFiles(files);
       if (files.length > 0) {
-        const derivedKey = extractDemoInputKey(files[0]?.name);
-        setDemoInputKey(derivedKey);
-        if (!derivedKey) {
-          setError(DEMO_INPUT_HINT);
-        } else {
-          setError('');
-        }
-      } else {
-        setDemoInputKey(null);
+        setError('');
       }
     } catch (uploadError) {
       console.error('UploadPage: 上传失败:', uploadError);
       setError('上传失败，请稍后再试');
-      setDemoInputKey(null);
     }
   };
 
@@ -293,7 +283,6 @@ const UploadPage: React.FC = () => {
     setSelectedImageId(null);
     setSelectedViewAngles([]);
     setShowViewAngleModal(false);
-    setDemoInputKey(null);
     clearFiles();
   }, []);
 
@@ -325,10 +314,14 @@ const UploadPage: React.FC = () => {
   };
 
   const startGeneration = async (imageId: number) => {
-    if (!demoInputKey) {
-      setError(DEMO_INPUT_HINT);
-      return;
-    }
+    const fileForImage = uploadedFiles.find(
+      (f) => f.status === 'success' && f.imageId === imageId
+    );
+    const demoKey =
+      fileForImage?.demoInputKey ??
+      extractDemoInputKey(fileForImage?.file.name) ??
+      '1';
+
     setShowViewAngleModal(false);
     setCurrentStep('generating');
     setGenerationProgress(0);
@@ -356,7 +349,7 @@ const UploadPage: React.FC = () => {
 
       setTimeout(async () => {
         try {
-          const staticResponse = await resultService.getStaticResults(demoInputKey);
+          const staticResponse = await resultService.getStaticResults(demoKey);
           setStaticResults(sortResultsByScore(staticResponse.results));
           setCurrentStep('result');
         } catch (fetchError) {
@@ -379,7 +372,6 @@ const UploadPage: React.FC = () => {
     setSelectedImageId(null);
     setSelectedViewAngles([]);
     setShowViewAngleModal(false);
-    setDemoInputKey(null);
     clearFiles();
   };
 
@@ -506,7 +498,7 @@ const UploadPage: React.FC = () => {
                         onClick={() => openImageModal(image.id)}
                       >
                         <img 
-                          src={`http://localhost:8000${image.relative_path}`}
+                          src={`${getApiBaseUrl()}${image.relative_path}`}
                           alt={displayName}
                         />
                         <div className="score-badge">
@@ -549,8 +541,9 @@ const UploadPage: React.FC = () => {
             </button>
           </div>
         )}
+      </div>
 
-        {showViewAngleModal && (
+      {showViewAngleModal && (
           <div className="modal-overlay view-angle-modal" onClick={() => setShowViewAngleModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
@@ -618,7 +611,7 @@ const UploadPage: React.FC = () => {
                     <div className="modal-body">
                       <div className="modal-image">
                         <img 
-                          src={`http://localhost:8000${selectedImage.relative_path}`}
+                          src={`${getApiBaseUrl()}${selectedImage.relative_path}`}
                           alt={displayName}
                         />
                       </div>
@@ -655,7 +648,6 @@ const UploadPage: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 };

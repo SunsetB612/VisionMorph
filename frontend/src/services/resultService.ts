@@ -58,6 +58,16 @@ export interface StaticResultResponse {
   results: StaticImageResult[];
 }
 
+export interface ShowcaseEvolutionItem {
+  input_key: string;
+  original_relative_path: string | null;
+  best_result: StaticImageResult | null;
+}
+
+export interface ShowcaseEvolutionResponse {
+  items: ShowcaseEvolutionItem[];
+}
+
 class ResultService {
   /**
    * 获取生成图片的评分结果
@@ -99,6 +109,11 @@ class ResultService {
     const query = inputKey ? `?input_key=${encodeURIComponent(inputKey)}` : '';
     const response = await apiRequest(`/api/result/static${query}`);
     return response;
+  }
+
+  /** 构图进化论：input 1/2/3 与各 output 下评分最高的一张 */
+  async getShowcaseEvolution(): Promise<ShowcaseEvolutionResponse> {
+    return apiRequest('/api/result/static/showcase');
   }
 }
 
